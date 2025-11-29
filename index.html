@@ -49,12 +49,11 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             font-size: 0.9rem;
         }
-        .red-btn{ background: linear-gradient(to bottom, #e74c3c, #c0392b); color: white; } 
-        .blue-btn{ background: linear-gradient(to bottom, #3498db, #2980b9); color: white; } 
-        .delete-btn{ background: linear-gradient(to bottom, #7f8c8d, #636e72); color: white; } 
+        .soldier-btn{ background: linear-gradient(to bottom, #7f8c8d, #636e72); color: white; } 
+        .special-btn{ background: linear-gradient(to bottom, #9b59b6, #8e44ad); color: white; }
+        .delete-btn{ background: linear-gradient(to bottom, #e74c3c, #c0392b); color: white; } 
         .start-btn{ background: linear-gradient(to bottom, #2ecc71, #27ae60); color: white; } 
         .pause-btn{ background: linear-gradient(to bottom, #e67e22, #d35400); color: white; }
-        .special-btn{ background: linear-gradient(to bottom, #9b59b6, #8e44ad); color: white; }
         .auto-btn{ background: linear-gradient(to bottom, #f1c40f, #f39c12); color: white; }
         .header button:hover{ transform: translateY(-2px); box-shadow: 0 6px 8px rgba(0,0,0,0.3); }
         .header button:active{ transform: translateY(0); }
@@ -296,8 +295,7 @@
     <div class="header">
         <h1>Advanced Circle Battle Simulator</h1>
         <div class="buttons">
-            <button class="red-btn" id="placeRed">Red Soldier</button>
-            <button class="blue-btn" id="placeBlue">Blue Soldier</button>
+            <button class="soldier-btn" id="placeSoldier">Soldier</button>
             <button class="special-btn" id="placeTank">Tank</button>
             <button class="special-btn" id="placeHealer">Healer</button>
             <button class="delete-btn" id="deleteTool">Delete</button>
@@ -308,7 +306,7 @@
     </div>
 
     <!-- Updated Notification Bar -->
-    <div class="notification" id="notification">Placing: Auto (Left=Red, Right=Blue)</div>
+    <div class="notification" id="notification">Placing: Soldier (Auto Team)</div>
 
     <div class="stats-container">
         <div class="stats-panel">
@@ -374,7 +372,7 @@
         const finalTimeEl = document.getElementById("finalTime");
         const remainingUnitsEl = document.getElementById("remainingUnits");
 
-        let placingMode = "auto";
+        let placingMode = "soldier";
         let gameRunning = false;
         let circles = []; // Start with empty array - no pre-placed units
         let mouseX = 0, mouseY = 0, showGhost = true;
@@ -744,23 +742,21 @@
             
             let color, radius = baseUnitSize;
             let team = "auto";
+            let type = "soldier";
             
             // Determine team based on mouse position
-            if (placingMode === "auto") {
+            if (placingMode === "soldier") {
                 team = mouseX < canvas.width/2 ? "red" : "blue";
+                type = "soldier";
                 color = team === "red" ? "rgba(231, 76, 60, 0.5)" : "rgba(52, 152, 219, 0.5)";
-            } else if (placingMode === "red") {
-                team = "red";
-                color = "rgba(231, 76, 60, 0.5)";
-            } else if (placingMode === "blue") {
-                team = "blue";
-                color = "rgba(52, 152, 219, 0.5)";
             } else if (placingMode === "tank") {
                 team = mouseX < canvas.width/2 ? "red" : "blue";
+                type = "tank";
                 color = team === "red" ? "rgba(231, 76, 60, 0.5)" : "rgba(52, 152, 219, 0.5)";
                 radius = baseUnitSize * 1.3;
             } else if (placingMode === "healer") {
                 team = mouseX < canvas.width/2 ? "red" : "blue";
+                type = "healer";
                 color = "rgba(155, 89, 182, 0.5)";
             }
                 
@@ -830,7 +826,7 @@
             updateStats();
             
             // Reset placing mode to default
-            placingMode = "auto";
+            placingMode = "soldier";
             showNotification('Game reset. Ready to place units.', 'info');
         }
 
@@ -903,29 +899,10 @@
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left, y = e.clientY - rect.top;
 
-            if (placingMode === "auto" || placingMode === "red" || placingMode === "blue" || 
-                placingMode === "tank" || placingMode === "healer") {
+            if (placingMode === "soldier" || placingMode === "tank" || placingMode === "healer") {
                 
-                let type = 'soldier';
-                let team = 'red';
-                
-                // Determine team based on mode and position
-                if (placingMode === "auto") {
-                    team = x < canvas.width/2 ? 'red' : 'blue';
-                    type = 'soldier';
-                } else if (placingMode === "red") {
-                    team = 'red';
-                    type = 'soldier';
-                } else if (placingMode === "blue") {
-                    team = 'blue';
-                    type = 'soldier';
-                } else if (placingMode === "tank") {
-                    team = x < canvas.width/2 ? 'red' : 'blue';
-                    type = 'tank';
-                } else if (placingMode === "healer") {
-                    team = x < canvas.width/2 ? 'red' : 'blue';
-                    type = 'healer';
-                }
+                let type = placingMode;
+                let team = x < canvas.width/2 ? 'red' : 'blue';
                 
                 let blocked = circles.some(c => Math.hypot(c.x - x, c.y - y) < c.radius * 2);
                 if (!blocked) {
@@ -946,15 +923,9 @@
         });
 
         // Button event listeners
-        document.getElementById("placeRed").onclick = () => {
-            placingMode = "red";
-            showNotification("Placing: Red Soldier", 'info');
-            showGhost = true;
-        };
-        
-        document.getElementById("placeBlue").onclick = () => {
-            placingMode = "blue";
-            showNotification("Placing: Blue Soldier", 'info');
+        document.getElementById("placeSoldier").onclick = () => {
+            placingMode = "soldier";
+            showNotification("Placing: Soldier (Auto Team)", 'info');
             showGhost = true;
         };
         
