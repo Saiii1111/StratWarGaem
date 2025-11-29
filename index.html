@@ -3,200 +3,222 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Circle Battle: Player vs AI</title>
+<title>Circle Battle Simulator</title>
 <style>
-/* RESET */
 *{margin:0;padding:0;box-sizing:border-box;}
-html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;background:#1c1c1c;color:white;display:flex;flex-direction:column;}
-
-/* HEADER */
-.header{position:relative;width:100%;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;background:#111;border-bottom:1px solid #333;flex-shrink:0;}
-.header h1{font-size:1.8rem;background:linear-gradient(to right,#3498db,#e74c3c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.button-header{padding:6px 12px;background:#2c2c2c;color:white;border:none;border-radius:5px;cursor:pointer;font-weight:bold;transition:0.2s;}
-.button-header:hover{background:#444;}
-
-/* GAME CONTAINER */
-.game-container{flex:1;width:100%;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
-
-/* CANVAS */
-canvas{background:#222;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,0.5);}
-
-/* STATS PANEL */
-.stats-panel{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:15px;background:rgba(20,20,20,0.8);padding:10px 20px;border-radius:10px;box-shadow:0 0 15px rgba(0,0,0,0.5);font-size:0.9rem;}
-.stats-panel div{display:flex;flex-direction:column;align-items:center;}
-.stats-panel .value{font-size:1.3rem;color:#f1c40f;font-weight:bold;}
-
-/* CONTROL BUTTONS */
-.controls{position:absolute;top:50%;right:10px;display:flex;flex-direction:column;gap:10px;transform:translateY(-50%);}
-.controls button{padding:8px 12px;background:#2c2c2c;border:none;border-radius:5px;color:white;cursor:pointer;transition:0.2s;font-weight:bold;}
-.controls button:hover{background:#444;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;background:#121212;color:white;display:flex;flex-direction:column;}
+.header{width:100%;padding:10px 20px;background:#1a1a1a;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;}
+.header h1{font-size:1.5rem;color:#f1c40f;}
+.controls{display:flex;gap:10px;}
+button{padding:5px 10px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;transition:0.2s;}
+button:hover{opacity:0.8;}
+#startBtn{background:#2ecc71;color:#121212;}
+#pauseBtn{background:#e67e22;color:#121212;}
+#teamRed{background:#e74c3c;color:white;}
+#teamBlue{background:#3498db;color:white;}
+.stats{display:flex;gap:20px;padding:10px;background:#1a1a1a;}
+canvas{flex:1;background:#181818;display:block;cursor:pointer;}
 </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>Circle Battle</h1>
-    <div>
-        <button class="button-header" id="startBtn">Start</button>
-        <button class="button-header" id="pauseBtn">Pause</button>
-    </div>
-</div>
-
-<div class="game-container">
-    <canvas id="gameCanvas"></canvas>
-
+    <h1>Circle Battle Simulator</h1>
     <div class="controls">
-        <button id="spawnBlue">Spawn Player</button>
-        <button id="spawnRed">Spawn AI</button>
-        <button id="clearAll">Clear All</button>
-    </div>
-
-    <div class="stats-panel">
-        <div><div class="value" id="blueCount">0</div>Player</div>
-        <div><div class="value" id="redCount">0</div>AI</div>
-        <div><div class="value" id="playerKills">0</div>Kills</div>
-        <div><div class="value" id="aiKills">0</div>AI Kills</div>
-        <div><div class="value" id="gameTime">0</div>Seconds</div>
+        <button id="teamRed">Red</button>
+        <button id="teamBlue">Blue</button>
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn">Pause</button>
     </div>
 </div>
+
+<div class="stats">
+    <div>Red: <span id="redCount">0</span></div>
+    <div>Blue: <span id="blueCount">0</span></div>
+    <div>Time: <span id="gameTime">0</span>s</div>
+</div>
+
+<canvas id="gameCanvas"></canvas>
 
 <script>
-const canvas=document.getElementById('gameCanvas');
-const ctx=canvas.getContext('2d');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight - document.querySelector('.header').offsetHeight - document.querySelector('.stats').offsetHeight;
 
-let canvasWidth=window.innerWidth;
-let canvasHeight=window.innerHeight - document.querySelector('.header').offsetHeight;
-canvas.width=canvasWidth;
-canvas.height=canvasHeight;
+let circles = [];
+let selectedCircle = null;
+let placingTeam = 'red';
+let running = false;
+let gameTime = 0;
+let lastTime = Date.now();
 
-window.addEventListener('resize',()=>{
-    canvasWidth=window.innerWidth;
-    canvasHeight=window.innerHeight - document.querySelector('.header').offsetHeight;
-    canvas.width=canvasWidth;
-    canvas.height=canvasHeight;
-});
+// UI Elements
+const redCountEl = document.getElementById('redCount');
+const blueCountEl = document.getElementById('blueCount');
+const gameTimeEl = document.getElementById('gameTime');
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+document.getElementById('teamRed').addEventListener('click',()=>placingTeam='red');
+document.getElementById('teamBlue').addEventListener('click',()=>placingTeam='blue');
+startBtn.addEventListener('click',()=>running=true);
+pauseBtn.addEventListener('click',()=>running=false);
 
-const blueCountElement=document.getElementById('blueCount');
-const redCountElement=document.getElementById('redCount');
-const playerKillsElement=document.getElementById('playerKills');
-const aiKillsElement=document.getElementById('aiKills');
-const gameTimeElement=document.getElementById('gameTime');
-const spawnBlueButton=document.getElementById('spawnBlue');
-const spawnRedButton=document.getElementById('spawnRed');
-const clearAllButton=document.getElementById('clearAll');
-const startBtn=document.getElementById('startBtn');
-const pauseBtn=document.getElementById('pauseBtn');
-
-let circles=[];
-let selectedCircle=null;
-let playerKills=0;
-let aiKills=0;
-let gameTime=0;
-let gameStartTime=Date.now();
-let animationId=null;
-let isPaused=true;
-let difficulty='medium';
-
-class Circle{
+// Circle class
+class Circle {
     constructor(x,y,team){
-        this.x=x; this.y=y; this.team=team; this.radius=20;
-        this.maxHealth=100; this.health=100;
-        this.speed=team==='blue'?2.5:(difficulty==='easy'?1.5:(difficulty==='medium'?2:2.2));
-        this.attackPower=team==='blue'?12:(difficulty==='easy'?8:(difficulty==='medium'?10:12));
-        this.targetX=null; this.targetY=null; this.isMoving=false;
-        this.attackCooldown=0; this.aiState='wander'; this.aiTarget=null;
-        this.wanderDirection=Math.random()*Math.PI*2; this.wanderChange=0;
+        this.x=x;
+        this.y=y;
+        this.team=team;
+        this.radius=20;
+        this.maxHealth=100;
+        this.health=this.maxHealth;
+        this.speed = 2;
+        this.attackPower = 10;
+        this.controlledByPlayer=false;
+        this.targetX = null;
+        this.targetY = null;
+        this.attackCooldown = 0;
+        this.aiDir = Math.random()*Math.PI*2;
     }
-
     draw(){
-        ctx.beginPath(); ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
-        ctx.fillStyle=this.team==='blue'?'#3498db':'#e74c3c'; ctx.fill();
-        if(this===selectedCircle){ ctx.strokeStyle='#f1c40f'; ctx.lineWidth=3; ctx.stroke(); }
+        // Circle
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+        ctx.fillStyle=this.team==='red'?'#e74c3c':'#3498db';
+        ctx.fill();
+        if(this===selectedCircle){
+            ctx.strokeStyle='#f1c40f';
+            ctx.lineWidth=3;
+            ctx.stroke();
+        }
         // Health bar
-        ctx.fillStyle='#333'; ctx.fillRect(this.x-25,this.y-this.radius-15,50,8);
-        let hp=this.health/this.maxHealth;
-        ctx.fillStyle=hp>0.6?'#2ecc71':hp>0.3?'#f39c12':'#e74c3c';
-        ctx.fillRect(this.x-25,this.y-this.radius-15,50*hp,8);
-        ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(this.x-25,this.y-this.radius-15,50,8);
+        ctx.fillStyle='#333';
+        ctx.fillRect(this.x-25,this.y-this.radius-15,50,8);
+        const hpRatio=this.health/this.maxHealth;
+        ctx.fillStyle=hpRatio>0.6?'#2ecc71':hpRatio>0.3?'#f39c12':'#e74c3c';
+        ctx.fillRect(this.x-25,this.y-this.radius-15,50*hpRatio,8);
+        ctx.strokeStyle='#fff';
+        ctx.strokeRect(this.x-25,this.y-this.radius-15,50,8);
     }
-
     move(){
-        if(this.team==='blue'){
-            if(this.isMoving && this.targetX!==null && this.targetY!==null){
-                let dx=this.targetX-this.x; let dy=this.targetY-this.y;
-                let dist=Math.sqrt(dx*dx+dy*dy);
-                if(dist>this.speed){ this.x+=dx/dist*this.speed; this.y+=dy/dist*this.speed; }
-                else{ this.x=this.targetX; this.y=this.targetY; this.isMoving=false; }
+        if(this.controlledByPlayer){
+            if(this.targetX!==null&&this.targetY!==null){
+                const dx=this.targetX-this.x;
+                const dy=this.targetY-this.y;
+                const dist=Math.sqrt(dx*dx+dy*dy);
+                if(dist>this.speed){
+                    this.x+=dx/dist*this.speed;
+                    this.y+=dy/dist*this.speed;
+                }else{
+                    this.x=this.targetX;
+                    this.y=this.targetY;
+                    this.targetX=null;
+                    this.targetY=null;
+                }
             }
-        }else{ this.updateAI(); }
-        if(this.attackCooldown>0) this.attackCooldown--;
+        }else{
+            // AI random movement
+            this.x+=Math.cos(this.aiDir)*this.speed*0.5;
+            this.y+=Math.sin(this.aiDir)*this.speed*0.5;
+            if(Math.random()<0.02)this.aiDir=Math.random()*Math.PI*2;
+            // Bounce
+            if(this.x<this.radius){this.x=this.radius;this.aiDir=Math.PI-this.aiDir;}
+            if(this.x>canvas.width-this.radius){this.x=canvas.width-this.radius;this.aiDir=Math.PI-this.aiDir;}
+            if(this.y<this.radius){this.y=this.radius;this.aiDir=-this.aiDir;}
+            if(this.y>canvas.height-this.radius){this.y=canvas.height-this.radius;this.aiDir=-this.aiDir;}
+        }
+        if(this.attackCooldown>0)this.attackCooldown--;
     }
-
-    updateAI(){
-        let nearest=null; let nearestDist=Infinity;
-        for(const c of circles){ if(c.team==='blue'){ let dx=c.x-this.x; let dy=c.y-this.y; let d=Math.sqrt(dx*dx+dy*dy); if(d<nearestDist){nearestDist=d;nearest=c;} } }
-        if(nearest){
-            if(nearestDist<50){ this.aiState='attack'; this.aiTarget=nearest; }
-            else if(nearestDist<200){ this.aiState='chase'; this.aiTarget=nearest; this.targetX=nearest.x; this.targetY=nearest.y; }
-            else{ this.aiState='wander'; this.aiTarget=null; }
-        }else{ this.aiState='wander'; this.aiTarget=null; }
-
-        if(this.aiState==='chase' && this.aiTarget){
-            let dx=this.targetX-this.x; let dy=this.targetY-this.y; let d=Math.sqrt(dx*dx+dy*dy);
-            if(d>0){ this.x+=dx/d*this.speed; this.y+=dy/d*this.speed; }
-        }else if(this.aiState==='wander'){
-            this.wanderChange--; if(this.wanderChange<=0){ this.wanderDirection+=(Math.random()-0.5)*Math.PI; this.wanderChange=30+Math.random()*30; }
-            this.x+=Math.cos(this.wanderDirection)*this.speed*0.7; this.y+=Math.sin(this.wanderDirection)*this.speed*0.7;
-            // Bounce walls
-            if(this.x<this.radius){ this.x=this.radius; this.wanderDirection=Math.PI-this.wanderDirection; }
-            else if(this.x>canvas.width-this.radius){ this.x=canvas.width-this.radius; this.wanderDirection=Math.PI-this.wanderDirection; }
-            if(this.y<this.radius){ this.y=this.radius; this.wanderDirection=-this.wanderDirection; }
-            else if(this.y>canvas.height-this.radius){ this.y=canvas.height-this.radius; this.wanderDirection=-this.wanderDirection; }
+    attack(enemy){
+        if(this.attackCooldown===0){
+            enemy.health-=this.attackPower;
+            this.attackCooldown=30;
         }
     }
-
-    setTarget(x,y){ this.targetX=x; this.targetY=y; this.isMoving=true; }
-
-    attack(enemy){ if(this.attackCooldown===0){ enemy.health-=this.attackPower; this.attackCooldown=30;
-        if(enemy.health<=0){ if(this.team==='blue'){playerKills++;playerKillsElement.textContent=playerKills;}else{aiKills++;aiKillsElement.textContent=aiKills;} }
-    }}
-
-    isCollidingWith(other){ let dx=this.x-other.x; let dy=this.y-other.y; return Math.sqrt(dx*dx+dy*dy)<this.radius+other.radius; }
+    isColliding(other){
+        const dx=this.x-other.x;
+        const dy=this.y-other.y;
+        return Math.sqrt(dx*dx+dy*dy)<this.radius+other.radius;
+    }
 }
 
-function spawnRandomCircle(team){ let x=Math.random()*(canvas.width-40)+20; let y=Math.random()*(canvas.height-40)+20; circles.push(new Circle(x,y,team)); updateCounts(); }
-function updateCounts(){ blueCountElement.textContent=circles.filter(c=>c.team==='blue').length; redCountElement.textContent=circles.filter(c=>c.team==='red').length; }
-function clearAll(){ circles=[]; selectedCircle=null; playerKills=0; aiKills=0; playerKillsElement.textContent=0; aiKillsElement.textContent=0; gameStartTime=Date.now(); updateCounts(); }
-canvas.addEventListener('click',(e)=>{ const rect=canvas.getBoundingClientRect(); let mx=e.clientX-rect.left; let my=e.clientY-rect.top; let clicked=null; for(const c of circles){ if(c.team==='blue'){ let dx=c.x-mx; let dy=c.y-my; if(Math.sqrt(dx*dx+dy*dy)<=c.radius){clicked=c; break;} } } if(clicked) selectedCircle=clicked; else if(selectedCircle) selectedCircle.setTarget(mx,my); });
-spawnBlueButton.addEventListener('click',()=>spawnRandomCircle('blue'));
-spawnRedButton.addEventListener('click',()=>spawnRandomCircle('red'));
-clearAllButton.addEventListener('click',clearAll);
+function spawnCircle(x,y,team){
+    circles.push(new Circle(x,y,team));
+    updateCounts();
+}
 
-startBtn.addEventListener('click',()=>{ if(isPaused){isPaused=false; gameStartTime=Date.now()-gameTime*1000; gameLoop(); } });
-pauseBtn.addEventListener('click',()=>{ isPaused=true; cancelAnimationFrame(animationId); });
+function updateCounts(){
+    const reds=circles.filter(c=>c.team==='red').length;
+    const blues=circles.filter(c=>c.team==='blue').length;
+    redCountEl.textContent=reds;
+    blueCountEl.textContent=blues;
+}
+
+// Canvas click
+canvas.addEventListener('click',(e)=>{
+    const rect=canvas.getBoundingClientRect();
+    const x=e.clientX-rect.left;
+    const y=e.clientY-rect.top;
+    // Check selection
+    let clicked=null;
+    for(let i=circles.length-1;i>=0;i--){
+        const c=circles[i];
+        const dx=c.x-x;
+        const dy=c.y-y;
+        if(Math.sqrt(dx*dx+dy*dy)<c.radius){
+            clicked=c;
+            break;
+        }
+    }
+    if(clicked){
+        // Select this unit
+        if(selectedCircle)selectedCircle.controlledByPlayer=false;
+        selectedCircle=clicked;
+        selectedCircle.controlledByPlayer=true;
+    }else if(selectedCircle){
+        // Move selected
+        selectedCircle.targetX=x;
+        selectedCircle.targetY=y;
+    }else{
+        // Placement mode (before start)
+        if(!running){
+            spawnCircle(x,y,placingTeam);
+        }
+    }
+});
 
 function gameLoop(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    // Move and resolve collisions
-    for(let i=0;i<circles.length;i++){
-        let c=circles[i]; c.move();
-        for(let j=i+1;j<circles.length;j++){
-            let o=circles[j];
-            let dx=c.x-o.x; let dy=c.y-o.y; let d=Math.sqrt(dx*dx+dy*dy); let minD=c.radius+o.radius;
-            if(d<minD && d>0){ let overlap=minD-d; let nx=dx/d; let ny=dy/d; c.x+=nx*(overlap/2); c.y+=ny*(overlap/2); o.x-=nx*(overlap/2); o.y-=ny*(overlap/2); }
+    if(running){
+        // Update units
+        for(const c of circles)c.move();
+        // Collision & attack
+        for(let i=0;i<circles.length;i++){
+            for(let j=i+1;j<circles.length;j++){
+                if(circles[i].team!==circles[j].team&&circles[i].isColliding(circles[j])){
+                    circles[i].attack(circles[j]);
+                    circles[j].attack(circles[i]);
+                }
+            }
         }
-        for(let j=0;j<circles.length;j++){ if(i!==j && c.team!==circles[j].team && c.isCollidingWith(circles[j])){ c.attack(circles[j]); } }
-        c.draw();
+        // Remove dead
+        circles=circles.filter(c=>c.health>0);
+        updateCounts();
+        // Time
+        const now=Date.now();
+        gameTime+=(now-lastTime)/1000;
+        lastTime=now;
+        gameTimeEl.textContent=Math.floor(gameTime);
+    }else{
+        lastTime=Date.now();
     }
-    circles=circles.filter(c=>c.health>0);
-    updateCounts();
-    gameTime=Math.floor((Date.now()-gameStartTime)/1000); gameTimeElement.textContent=gameTime;
-    if(!isPaused) animationId=requestAnimationFrame(gameLoop);
+    // Draw
+    for(const c of circles)c.draw();
+    requestAnimationFrame(gameLoop);
 }
 
-// Spawn initial circles
-for(let i=0;i<5;i++){ spawnRandomCircle('blue'); spawnRandomCircle('red'); }
-
+gameLoop();
 </script>
 </body>
 </html>
