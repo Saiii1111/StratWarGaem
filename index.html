@@ -16,7 +16,9 @@ button:hover{opacity:0.8;}
 #pauseBtn{background:#e67e22;color:#121212;}
 #teamRed{background:#e74c3c;color:white;}
 #teamBlue{background:#3498db;color:white;}
-.stats{display:flex;gap:20px;padding:10px;background:#1a1a1a;}
+#deleteTool{background:#95a5a6;color:#121212;}
+.stats{display:flex;gap:20px;padding:10px;background:#1a1a1a;justify-content:center;}
+#notification{position:absolute;top:50px;left:50%;transform:translateX(-50%);background:#222;padding:5px 15px;border-radius:5px;color:#f1c40f;font-weight:bold;}
 canvas{flex:1;background:#181818;display:block;cursor:pointer;}
 </style>
 </head>
@@ -27,10 +29,13 @@ canvas{flex:1;background:#181818;display:block;cursor:pointer;}
     <div class="controls">
         <button id="teamRed">Red</button>
         <button id="teamBlue">Blue</button>
+        <button id="deleteTool">Delete</button>
         <button id="startBtn">Start</button>
         <button id="pauseBtn">Pause</button>
     </div>
 </div>
+
+<div id="notification">Placing: Red</div>
 
 <div class="stats">
     <div>Red: <span id="redCount">0</span></div>
@@ -48,7 +53,7 @@ canvas.height=window.innerHeight-document.querySelector('.header').offsetHeight-
 
 let circles=[];
 let selectedCircle=null;
-let placingTeam='red';
+let placingTool='red'; // 'red', 'blue', 'delete'
 let running=false;
 let gameTime=0;
 let lastTime=Date.now();
@@ -58,11 +63,17 @@ const blueCountEl=document.getElementById('blueCount');
 const gameTimeEl=document.getElementById('gameTime');
 const startBtn=document.getElementById('startBtn');
 const pauseBtn=document.getElementById('pauseBtn');
+const notificationEl=document.getElementById('notification');
 
-document.getElementById('teamRed').addEventListener('click',()=>placingTeam='red');
-document.getElementById('teamBlue').addEventListener('click',()=>placingTeam='blue');
+document.getElementById('teamRed').addEventListener('click',()=>{placingTool='red';updateNotification();});
+document.getElementById('teamBlue').addEventListener('click',()=>{placingTool='blue';updateNotification();});
+document.getElementById('deleteTool').addEventListener('click',()=>{placingTool='delete';updateNotification();});
 startBtn.addEventListener('click',()=>running=true);
 pauseBtn.addEventListener('click',()=>running=false);
+
+function updateNotification(){
+    notificationEl.textContent='Placing: '+placingTool.charAt(0).toUpperCase()+placingTool.slice(1);
+}
 
 class Circle{
     constructor(x,y,team){
@@ -78,7 +89,7 @@ class Circle{
         this.targetX=null;
         this.targetY=null;
         this.attackCooldown=0;
-        this.encircleAngle=Math.random()*Math.PI*2; // For AI encirclement
+        this.encircleAngle=Math.random()*Math.PI*2;
     }
     draw(){
         ctx.beginPath();
@@ -90,7 +101,6 @@ class Circle{
             ctx.lineWidth=3;
             ctx.stroke();
         }
-        // Health bar
         ctx.fillStyle='#333';
         ctx.fillRect(this.x-25,this.y-this.radius-15,50,8);
         const hpRatio=this.health/this.maxHealth;
@@ -116,7 +126,6 @@ class Circle{
                 }
             }
         }else{
-            // AI finds nearest enemy
             let targets=circles.filter(c=>c.team!==this.team);
             if(targets.length>0){
                 let nearest=null;
@@ -125,13 +134,9 @@ class Circle{
                     const dx=t.x-this.x;
                     const dy=t.y-this.y;
                     const d=Math.sqrt(dx*dx+dy*dy);
-                    if(d<minDist){
-                        minDist=d;
-                        nearest=t;
-                    }
+                    if(d<minDist){minDist=d;nearest=t;}
                 }
                 if(nearest){
-                    // Encirclement: spread units around enemy
                     const allies=circles.filter(c=>c.team===this.team && c!==this);
                     const index=allies.indexOf(this);
                     const angle=index/allies.length*Math.PI*2;
@@ -139,7 +144,6 @@ class Circle{
                     const offsetY=Math.sin(angle)*25;
                     const targetX=nearest.x+offsetX;
                     const targetY=nearest.y+offsetY;
-
                     const dx=targetX-this.x;
                     const dy=targetY-this.y;
                     const dist=Math.sqrt(dx*dx+dy*dy);
@@ -150,7 +154,6 @@ class Circle{
                 }
             }
         }
-
         if(this.attackCooldown>0)this.attackCooldown--;
     }
     attack(enemy){
@@ -166,7 +169,6 @@ class Circle{
     }
 }
 
-// Simple collision resolution
 function resolveCollisions(){
     for(let i=0;i<circles.length;i++){
         for(let j=i+1;j<circles.length;j++){
@@ -187,33 +189,30 @@ function resolveCollisions(){
     }
 }
 
-function spawnCircle(x,y,team){
-    circles.push(new Circle(x,y,team));
-    updateCounts();
-}
-
-function updateCounts(){
-    const reds=circles.filter(c=>c.team==='red').length;
-    const blues=circles.filter(c=>c.team==='blue').length;
-    redCountEl.textContent=reds;
-    blueCountEl.textContent=blues;
-}
+function spawnCircle(x,y,team){circles.push(new Circle(x,y,team));updateCounts();}
+function updateCounts(){redCountEl.textContent=circles.filter(c=>c.team==='red').length;blueCountEl.textContent=circles.filter(c=>c.team==='blue').length;}
 
 canvas.addEventListener('click',(e)=>{
     const rect=canvas.getBoundingClientRect();
     const x=e.clientX-rect.left;
     const y=e.clientY-rect.top;
+    if(placingTool==='delete'){
+        for(let i=circles.length-1;i>=0;i--){
+            const c=circles[i];
+            const dx=c.x-x;
+            const dy=c.y-y;
+            if(Math.sqrt(dx*dx+dy*dy)<c.radius){circles.splice(i,1);updateCounts();break;}
+        }
+        return;
+    }
     let clicked=null;
     for(let i=circles.length-1;i>=0;i--){
         const c=circles[i];
         const dx=c.x-x;
         const dy=c.y-y;
-        if(Math.sqrt(dx*dx+dy*dy)<c.radius){
-            clicked=c;
-            break;
-        }
+        if(Math.sqrt(dx*dx+dy*dy)<c.radius){clicked=c;break;}
     }
-    if(clicked){
+    if(clicked && running){
         if(selectedCircle)selectedCircle.controlledByPlayer=false;
         selectedCircle=clicked;
         selectedCircle.controlledByPlayer=true;
@@ -221,7 +220,7 @@ canvas.addEventListener('click',(e)=>{
         selectedCircle.targetX=x;
         selectedCircle.targetY=y;
     }else if(!running){
-        spawnCircle(x,y,placingTeam);
+        spawnCircle(x,y,placingTool);
     }
 });
 
@@ -230,7 +229,6 @@ function gameLoop(){
     if(running){
         for(const c of circles)c.move();
         resolveCollisions();
-        // Attack collisions
         for(let i=0;i<circles.length;i++){
             for(let j=i+1;j<circles.length;j++){
                 if(circles[i].team!==circles[j].team && circles[i].isColliding(circles[j])){
@@ -239,21 +237,19 @@ function gameLoop(){
                 }
             }
         }
-        // Remove dead
         circles=circles.filter(c=>c.health>0);
         updateCounts();
         const now=Date.now();
         gameTime+=(now-lastTime)/1000;
         lastTime=now;
         gameTimeEl.textContent=Math.floor(gameTime);
-    }else{
-        lastTime=Date.now();
-    }
+    }else lastTime=Date.now();
     for(const c of circles)c.draw();
     requestAnimationFrame(gameLoop);
 }
 
 gameLoop();
+updateNotification();
 </script>
 </body>
 </html>
