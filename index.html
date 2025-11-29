@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Circle Battle Simulator</title>
+    <title>Advanced Circle Battle Simulator</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { 
             font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background: linear-gradient(135deg, #0c0c0c, #1a1a2e);
             color:#fff; 
-            overflow:hidden;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -38,7 +38,7 @@
             text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
             letter-spacing: 1px;
         }
-        .header .buttons { display:flex; gap:12px; }
+        .header .buttons { display:flex; gap:12px; flex-wrap: wrap; }
         .header button { 
             border:none; 
             padding:8px 16px; 
@@ -49,49 +49,73 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             font-size: 0.9rem;
         }
-        .red-btn{
-            background: linear-gradient(to bottom, #e74c3c, #c0392b);
-            color: white;
-        } 
-        .blue-btn{
-            background: linear-gradient(to bottom, #3498db, #2980b9);
-            color: white;
-        } 
-        .delete-btn{
-            background: linear-gradient(to bottom, #7f8c8d, #636e72);
-            color: white;
-        } 
-        .start-btn{
-            background: linear-gradient(to bottom, #2ecc71, #27ae60);
-            color: white;
-        } 
-        .pause-btn{
-            background: linear-gradient(to bottom, #e67e22, #d35400);
-            color: white;
-        }
-        .header button:hover{
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0,0,0,0.3);
-        }
-        .header button:active{
-            transform: translateY(0);
-        }
+        .red-btn{ background: linear-gradient(to bottom, #e74c3c, #c0392b); color: white; } 
+        .blue-btn{ background: linear-gradient(to bottom, #3498db, #2980b9); color: white; } 
+        .delete-btn{ background: linear-gradient(to bottom, #7f8c8d, #636e72); color: white; } 
+        .start-btn{ background: linear-gradient(to bottom, #2ecc71, #27ae60); color: white; } 
+        .pause-btn{ background: linear-gradient(to bottom, #e67e22, #d35400); color: white; }
+        .special-btn{ background: linear-gradient(to bottom, #9b59b6, #8e44ad); color: white; }
+        .header button:hover{ transform: translateY(-2px); box-shadow: 0 6px 8px rgba(0,0,0,0.3); }
+        .header button:active{ transform: translateY(0); }
+        .header button:disabled{ opacity: 0.6; cursor: not-allowed; transform: none; }
 
         #placingNotification { 
-            position:absolute; 
-            top:90px; 
-            left:50%; 
-            transform:translateX(-50%); 
-            background:rgba(40, 40, 60, 0.9); 
-            padding:8px 20px; 
-            border-radius:20px; 
-            font-weight:bold; 
-            color:#f1c40f; 
-            box-shadow:0 4px 15px rgba(0,0,0,0.5);
+            position: absolute; 
+            top: 90px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: rgba(40, 40, 60, 0.95); 
+            padding: 10px 25px; 
+            border-radius: 25px; 
+            font-weight: bold; 
+            color: #f1c40f; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             z-index: 10;
             border: 1px solid rgba(241, 196, 15, 0.3);
             backdrop-filter: blur(5px);
+            font-size: 1.1rem;
+            min-width: 200px;
+            text-align: center;
         }
+
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+
+        .stats-panel {
+            background: rgba(30, 30, 46, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stats-panel h3 {
+            color: #f1c40f;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+            font-size: 1.3rem;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 12px 0;
+            font-size: 1rem;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .red-stat { color: #e74c3c; font-weight: bold; }
+        .blue-stat { color: #3498db; font-weight: bold; }
 
         #gameCanvas { 
             display:block; 
@@ -200,30 +224,6 @@
             transform: translateY(-3px);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
         }
-        
-        .modal-btn:active {
-            transform: translateY(0);
-        }
-        
-        .confetti {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: #f1c40f;
-            border-radius: 50%;
-            animation: confetti-fall 5s linear forwards;
-        }
-        
-        @keyframes confetti-fall {
-            0% {
-                transform: translateY(-100px) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(1000px) rotate(720deg);
-                opacity: 0;
-            }
-        }
 
         .instructions {
             margin-top: 20px;
@@ -235,27 +235,85 @@
             font-size: 0.9rem;
             color: #aaa;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            line-height: 1.5;
+        }
+
+        .damage-text {
+            position: absolute;
+            color: #ff6b6b;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-30px); opacity: 0; }
+        }
+
+        .special-unit {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Circle Battle Simulator</h1>
+        <h1>Advanced Circle Battle Simulator</h1>
         <div class="buttons">
-            <button class="red-btn" id="placeRed">Place Red</button>
-            <button class="blue-btn" id="placeBlue">Place Blue</button>
+            <button class="red-btn" id="placeRed">Red Soldier</button>
+            <button class="blue-btn" id="placeBlue">Blue Soldier</button>
+            <button class="special-btn" id="placeRedTank">Red Tank</button>
+            <button class="special-btn" id="placeBlueTank">Blue Tank</button>
+            <button class="special-btn" id="placeHealer">Healer</button>
             <button class="delete-btn" id="deleteTool">Delete</button>
             <button class="start-btn" id="startBtn">Start Battle</button>
             <button class="pause-btn" id="pauseBtn">Pause</button>
+            <button class="special-btn" id="autoPlaceBtn">Auto Place</button>
         </div>
     </div>
 
-    <div id="placingNotification">Placing: Red</div>
+    <div id="placingNotification">Placing: Red Soldier</div>
+
+    <div class="stats-container">
+        <div class="stats-panel">
+            <h3>Battle Statistics</h3>
+            <div class="stat-row">
+                <span>Red Units:</span>
+                <span class="red-stat" id="redCount">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Blue Units:</span>
+                <span class="blue-stat" id="blueCount">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Total Units:</span>
+                <span id="totalCount">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Battle Time:</span>
+                <span id="battleTime">0s</span>
+            </div>
+            <div class="stat-row">
+                <span>Game Status:</span>
+                <span id="gameStatus">Paused</span>
+            </div>
+        </div>
+    </div>
 
     <div class="modal" id="gameOverModal">
         <div class="modal-content">
             <h2>Battle Complete!</h2>
             <div id="winnerText" class="winner-text">Red Team Victory!</div>
+            <div id="battleStats" style="margin: 15px 0; font-size: 1.1rem;">
+                Battle lasted: <span id="finalTime">0</span> seconds<br>
+                Remaining units: <span id="remainingUnits">0</span>
+            </div>
             <div class="modal-buttons">
                 <button class="modal-btn play-again-btn" onclick="resetGame()">Play Again</button>
                 <button class="modal-btn close-modal-btn" onclick="closeModal()">Close</button>
@@ -266,7 +324,7 @@
     <canvas id="gameCanvas" width="1000" height="600"></canvas>
     
     <div class="instructions">
-        <p>Place Red and Blue circles on the battlefield, then click "Start Battle" to begin the simulation.</p>
+        <p><strong>Instructions:</strong> Place different unit types on the battlefield, then click "Start Battle" to begin the simulation.</p>
         <p>Use the Delete tool to remove circles. The battle ends when one team is completely eliminated.</p>
     </div>
 
@@ -277,17 +335,57 @@
         const gameOverModal = document.getElementById("gameOverModal");
         const winnerTextEl = document.getElementById("winnerText");
 
+        // Stats elements
+        const redCountEl = document.getElementById("redCount");
+        const blueCountEl = document.getElementById("blueCount");
+        const totalCountEl = document.getElementById("totalCount");
+        const battleTimeEl = document.getElementById("battleTime");
+        const gameStatusEl = document.getElementById("gameStatus");
+        const finalTimeEl = document.getElementById("finalTime");
+        const remainingUnitsEl = document.getElementById("remainingUnits");
+
         let placingMode = "red";
         let gameRunning = false;
-        let circles = [];
+        let circles = []; // Start with empty array - no pre-placed units
         let mouseX = 0, mouseY = 0, showGhost = true;
         let attackEffects = [];
+        let damageTexts = [];
+        let gameSpeed = 1.0;
+        let baseUnitSize = 20;
+        let battleStartTime = 0;
+        let battleDuration = 0;
 
         canvas.addEventListener("mousemove", e => {
             const rect = canvas.getBoundingClientRect();
             mouseX = e.clientX - rect.left;
             mouseY = e.clientY - rect.top;
         });
+
+        class DamageText {
+            constructor(x, y, damage, isHeal = false) {
+                this.x = x;
+                this.y = y;
+                this.damage = damage;
+                this.isHeal = isHeal;
+                this.life = 1.0;
+                this.velocityY = -1;
+            }
+            
+            update() {
+                this.y += this.velocityY;
+                this.life -= 0.02;
+                return this.life > 0;
+            }
+            
+            draw() {
+                ctx.font = 'bold 16px Arial';
+                ctx.fillStyle = this.isHeal 
+                    ? `rgba(46, 204, 113, ${this.life})` 
+                    : `rgba(231, 76, 60, ${this.life})`;
+                ctx.textAlign = 'center';
+                ctx.fillText((this.isHeal ? '+' : '-') + this.damage, this.x, this.y);
+            }
+        }
 
         class AttackEffect {
             constructor(x, y, team) {
@@ -320,35 +418,76 @@
         }
 
         class Circle {
-            constructor(x, y, team) {
+            constructor(x, y, team, type = 'soldier') {
                 this.x = x;
                 this.y = y;
                 this.team = team;
-                this.radius = 20;
-                this.health = 100;
-                this.attackPower = team === 'red' ? 10 : 12;
-                this.attackCooldown = 400;
+                this.type = type;
+                
+                // Set properties based on unit type
+                if (type === 'soldier') {
+                    this.radius = baseUnitSize;
+                    this.health = 100;
+                    this.maxHealth = 100;
+                    this.attackPower = team === 'red' ? 10 : 12;
+                    this.attackCooldown = 400;
+                    this.maxSpeed = 1.4;
+                    this.turnSpeed = 0.15;
+                } else if (type === 'tank') {
+                    this.radius = baseUnitSize * 1.3;
+                    this.health = 200;
+                    this.maxHealth = 200;
+                    this.attackPower = team === 'red' ? 15 : 18;
+                    this.attackCooldown = 600;
+                    this.maxSpeed = 0.8;
+                    this.turnSpeed = 0.1;
+                } else if (type === 'healer') {
+                    this.radius = baseUnitSize;
+                    this.health = 80;
+                    this.maxHealth = 80;
+                    this.attackPower = 0;
+                    this.healPower = 5;
+                    this.healCooldown = 500;
+                    this.maxSpeed = 1.0;
+                    this.turnSpeed = 0.12;
+                }
+                
                 this.lastAttack = 0;
+                this.lastHeal = 0;
                 this.velX = 0;
                 this.velY = 0;
-                this.maxSpeed = 1.4;
-                this.turnSpeed = 0.15;
                 this.id = Math.random().toString(36).substr(2, 9);
             }
 
             draw() {
-                // Draw circle with gradient
+                // Draw circle with gradient based on type
                 const gradient = ctx.createRadialGradient(
                     this.x - 5, this.y - 5, 5,
                     this.x, this.y, this.radius
                 );
                 
                 if (this.team === 'red') {
-                    gradient.addColorStop(0, '#ff6b6b');
-                    gradient.addColorStop(1, '#c0392b');
+                    if (this.type === 'tank') {
+                        gradient.addColorStop(0, '#ff8a8a');
+                        gradient.addColorStop(1, '#a83232');
+                    } else if (this.type === 'healer') {
+                        gradient.addColorStop(0, '#ff9ff3');
+                        gradient.addColorStop(1, '#cc5aa0');
+                    } else {
+                        gradient.addColorStop(0, '#ff6b6b');
+                        gradient.addColorStop(1, '#c0392b');
+                    }
                 } else {
-                    gradient.addColorStop(0, '#74b9ff');
-                    gradient.addColorStop(1, '#2980b9');
+                    if (this.type === 'tank') {
+                        gradient.addColorStop(0, '#89c4f4');
+                        gradient.addColorStop(1, '#2c3e8f');
+                    } else if (this.type === 'healer') {
+                        gradient.addColorStop(0, '#81ecec');
+                        gradient.addColorStop(1, '#00a8a8');
+                    } else {
+                        gradient.addColorStop(0, '#74b9ff');
+                        gradient.addColorStop(1, '#2980b9');
+                    }
                 }
                 
                 ctx.beginPath();
@@ -356,32 +495,44 @@
                 ctx.fillStyle = gradient;
                 ctx.fill();
                 
-                // Add a subtle glow
-                ctx.shadowColor = this.team === 'red' ? '#e74c3c' : '#3498db';
-                ctx.shadowBlur = 15;
-                ctx.fill();
-                ctx.shadowBlur = 0;
+                // Add a subtle glow for special units
+                if (this.type !== 'soldier') {
+                    ctx.shadowColor = this.team === 'red' ? '#e74c3c' : '#3498db';
+                    ctx.shadowBlur = 15;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
                 
                 // Health bar
+                const barWidth = 50;
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.fillRect(this.x - 25, this.y - this.radius - 15, 50, 8);
+                ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 15, barWidth, 8);
                 
                 let healthColor;
-                if (this.health > 60) healthColor = '#2ecc71';
-                else if (this.health > 30) healthColor = '#f39c12';
+                const healthPercent = this.health / this.maxHealth;
+                if (healthPercent > 0.6) healthColor = '#2ecc71';
+                else if (healthPercent > 0.3) healthColor = '#f39c12';
                 else healthColor = '#e74c3c';
                 
                 ctx.fillStyle = healthColor;
-                ctx.fillRect(this.x - 25, this.y - this.radius - 15, 50 * (this.health / 100), 8);
+                ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 15, barWidth * healthPercent, 8);
                 
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.strokeRect(this.x - 25, this.y - this.radius - 15, 50, 8);
+                ctx.strokeRect(this.x - barWidth/2, this.y - this.radius - 15, barWidth, 8);
                 
-                // Team indicator dot
+                // Team and type indicator
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
                 ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9';
                 ctx.fill();
+                
+                // Type indicator
+                if (this.type !== 'soldier') {
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.type === 'tank' ? 'T' : 'H', this.x, this.y + 4);
+                }
             }
 
             distanceTo(other) {
@@ -394,7 +545,7 @@
                     if (other === this) continue;
                     let dx = this.x - other.x, dy = this.y - other.y;
                     let dist = Math.hypot(dx, dy);
-                    let minDist = this.radius * 2 + 6;
+                    let minDist = this.radius + other.radius + 6;
                     if (dist < minDist && dist > 0) {
                         let force = (minDist - dist) / minDist;
                         pushX += dx / dist * force * 1.5;
@@ -406,9 +557,52 @@
             }
 
             updateAI(enemies, allies) {
-                if (!gameRunning || enemies.length === 0) return;
+                if (!gameRunning) return;
 
                 this.applySeparation([...enemies, ...allies]);
+
+                // Healers try to heal injured allies
+                if (this.type === 'healer') {
+                    const injuredAllies = allies.filter(a => a.health < a.maxHealth && a !== this);
+                    if (injuredAllies.length > 0) {
+                        let target = injuredAllies.reduce((a, b) => a.health < b.health ? a : b);
+                        let dx = target.x - this.x, dy = target.y - this.y;
+                        let dist = Math.hypot(dx, dy);
+                        let desiredX = dx / dist, desiredY = dy / dist;
+                        let stopDist = this.radius + target.radius + 15;
+
+                        if (dist > stopDist) {
+                            let speed = this.maxSpeed * Math.min(1, dist / 120);
+                            this.velX += (desiredX * speed - this.velX) * this.turnSpeed;
+                            this.velY += (desiredY * speed - this.velY) * this.turnSpeed;
+                            this.x += this.velX;
+                            this.y += this.velY;
+                        } else {
+                            this.velX *= 0.8;
+                            this.velY *= 0.8;
+                            
+                            // Heal ally
+                            let now = performance.now();
+                            if (now - this.lastHeal >= this.healCooldown) {
+                                const healAmount = Math.min(this.healPower, target.maxHealth - target.health);
+                                target.health += healAmount;
+                                this.lastHeal = now;
+                                
+                                // Show heal effect
+                                damageTexts.push(new DamageText(
+                                    target.x,
+                                    target.y - target.radius - 10,
+                                    healAmount,
+                                    true
+                                ));
+                            }
+                        }
+                        return;
+                    }
+                }
+
+                // Default behavior: attack enemies
+                if (enemies.length === 0) return;
 
                 let target = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
                 let dx = target.x - this.x, dy = target.y - this.y;
@@ -427,12 +621,20 @@
                     this.velY *= 0.8;
                 }
 
-                if (dist > this.radius + 1 && dist <= stopDist) {
+                if (dist > this.radius + 1 && dist <= stopDist && this.type !== 'healer') {
                     let now = performance.now();
                     if (now - this.lastAttack >= this.attackCooldown) {
                         target.health -= this.attackPower;
                         this.lastAttack = now;
                         
+                        // Show damage number
+                        damageTexts.push(new DamageText(
+                            target.x,
+                            target.y - target.radius - 10,
+                            this.attackPower
+                        ));
+                        
+                        // Create attack effect
                         attackEffects.push(new AttackEffect(
                             target.x + (Math.random() - 0.5) * 10,
                             target.y + (Math.random() - 0.5) * 10,
@@ -444,7 +646,6 @@
         }
 
         function drawMap() {
-            // Draw background
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             // Draw grid
@@ -480,37 +681,54 @@
         }
 
         function drawGhost() {
-            if (!showGhost || (placingMode !== "red" && placingMode !== "blue")) return;
+            if (!showGhost || (placingMode !== "red" && placingMode !== "blue" && 
+                placingMode !== "redTank" && placingMode !== "blueTank" && placingMode !== "healer")) return;
             
-            let color = placingMode === "red" 
-                ? "rgba(231, 76, 60, 0.5)" 
-                : "rgba(52, 152, 219, 0.5)";
+            let color, radius = baseUnitSize;
+            if (placingMode === "red" || placingMode === "redTank") {
+                color = "rgba(231, 76, 60, 0.5)";
+                if (placingMode === "redTank") radius = baseUnitSize * 1.3;
+            } else if (placingMode === "blue" || placingMode === "blueTank") {
+                color = "rgba(52, 152, 219, 0.5)";
+                if (placingMode === "blueTank") radius = baseUnitSize * 1.3;
+            } else if (placingMode === "healer") {
+                color = "rgba(155, 89, 182, 0.5)";
+            }
                 
-            let blocked = circles.some(c => Math.hypot(c.x - mouseX, c.y - mouseY) < c.radius * 2);
+            let blocked = circles.some(c => Math.hypot(c.x - mouseX, c.y - mouseY) < (c.radius + radius) * 0.8);
             if (blocked) color = "rgba(255, 0, 0, 0.5)";
             
             ctx.beginPath();
-            ctx.arc(mouseX, mouseY, 20, 0, Math.PI * 2);
+            ctx.arc(mouseX, mouseY, radius, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
             
             // Add a pulsing effect to the ghost circle
-            ctx.strokeStyle = placingMode === "red" ? "#e74c3c" : "#3498db";
+            ctx.strokeStyle = color.replace('0.5', '0.8');
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
-            ctx.arc(mouseX, mouseY, 20, 0, Math.PI * 2);
+            ctx.arc(mouseX, mouseY, radius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
         }
 
-        function checkGameOver() {
-            if (!gameRunning) return;
-            
+        function updateStats() {
             const redTeam = circles.filter(c => c.team === "red" && c.health > 0);
             const blueTeam = circles.filter(c => c.team === "blue" && c.health > 0);
             
-            if (redTeam.length === 0 || blueTeam.length === 0) {
+            redCountEl.textContent = redTeam.length;
+            blueCountEl.textContent = blueTeam.length;
+            totalCountEl.textContent = circles.length;
+            gameStatusEl.textContent = gameRunning ? "Running" : "Paused";
+            
+            if (gameRunning) {
+                battleDuration = Math.floor((performance.now() - battleStartTime) / 1000);
+                battleTimeEl.textContent = battleDuration + 's';
+            }
+            
+            // Check for game over
+            if (gameRunning && (redTeam.length === 0 || blueTeam.length === 0)) {
                 gameRunning = false;
                 const winner = redTeam.length > 0 ? 'red' : 'blue';
                 showGameOver(winner);
@@ -518,46 +736,62 @@
         }
 
         function showGameOver(winner) {
+            const redTeam = circles.filter(c => c.team === "red" && c.health > 0);
+            const blueTeam = circles.filter(c => c.team === "blue" && c.health > 0);
+            
             winnerTextEl.textContent = `${winner === 'red' ? 'Red' : 'Blue'} Team Victory!`;
             winnerTextEl.className = `winner-text ${winner === 'red' ? 'winner-red' : 'winner-blue'}`;
-            gameOverModal.style.display = 'flex';
-            createConfetti();
-        }
-
-        function createConfetti() {
-            const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6'];
-            const modal = document.querySelector('.modal-content');
             
-            for (let i = 0; i < 100; i++) {
-                const confetti = document.createElement('div');
-                confetti.className = 'confetti';
-                confetti.style.left = Math.random() * 100 + '%';
-                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-                confetti.style.animationDelay = Math.random() * 5 + 's';
-                confetti.style.width = Math.random() * 10 + 5 + 'px';
-                confetti.style.height = Math.random() * 10 + 5 + 'px';
-                modal.appendChild(confetti);
-            }
+            finalTimeEl.textContent = battleDuration;
+            remainingUnitsEl.textContent = winner === 'red' ? redTeam.length : blueTeam.length;
+            
+            gameOverModal.style.display = 'flex';
         }
 
         function resetGame() {
             circles = [];
             attackEffects = [];
+            damageTexts = [];
             gameRunning = false;
             showGhost = true;
+            battleStartTime = 0;
+            battleDuration = 0;
             gameOverModal.style.display = 'none';
+            updateStats();
             
-            // Remove confetti
-            const confettiElements = document.querySelectorAll('.confetti');
-            confettiElements.forEach(el => el.remove());
+            // Reset placing mode to default
+            placingMode = "red";
+            placingNotification.textContent = "Placing: Red Soldier";
         }
 
         function closeModal() {
             gameOverModal.style.display = 'none';
+        }
+
+        function autoPlaceUnits() {
+            circles = [];
             
-            // Remove confetti
-            const confettiElements = document.querySelectorAll('.confetti');
-            confettiElements.forEach(el => el.remove());
+            // Place red units on the left
+            for (let i = 0; i < 8; i++) {
+                const x = 100 + Math.random() * 300;
+                const y = 100 + Math.random() * 400;
+                circles.push(new Circle(x, y, 'red', 'soldier'));
+            }
+            
+            // Place blue units on the right
+            for (let i = 0; i < 8; i++) {
+                const x = 600 + Math.random() * 300;
+                const y = 100 + Math.random() * 400;
+                circles.push(new Circle(x, y, 'blue', 'soldier'));
+            }
+            
+            // Add a few special units
+            circles.push(new Circle(150, 150, 'red', 'tank'));
+            circles.push(new Circle(150, 450, 'red', 'healer'));
+            circles.push(new Circle(850, 150, 'blue', 'tank'));
+            circles.push(new Circle(850, 450, 'blue', 'healer'));
+            
+            updateStats();
         }
 
         function gameLoop() {
@@ -567,18 +801,29 @@
             const redTeam = circles.filter(c => c.team === "red");
             const blueTeam = circles.filter(c => c.team === "blue");
 
+            // Update and draw attack effects
             attackEffects = attackEffects.filter(effect => effect.draw());
 
+            // Update and draw damage texts
+            damageTexts = damageTexts.filter(text => text.update());
+            damageTexts.forEach(text => text.draw());
+
+            // Update circles with game speed adjustment
             for (let c of circles) {
                 let allies = circles.filter(x => x.team === c.team && x.health > 0);
                 let enemies = circles.filter(x => x.team !== c.team && x.health > 0);
-                c.updateAI(enemies, allies);
+                
+                // Apply game speed to updates
+                for (let i = 0; i < gameSpeed; i++) {
+                    c.updateAI(enemies, allies);
+                }
+                
                 c.draw();
             }
 
             circles = circles.filter(c => c.health > 0);
             
-            checkGameOver();
+            updateStats();
             
             requestAnimationFrame(gameLoop);
         }
@@ -587,23 +832,58 @@
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left, y = e.clientY - rect.top;
 
-            if (placingMode === "red" || placingMode === "blue") {
+            if (placingMode === "red" || placingMode === "blue" || 
+                placingMode === "redTank" || placingMode === "blueTank" || placingMode === "healer") {
+                
+                let type = 'soldier';
+                let team = 'red';
+                
+                if (placingMode === "red") { team = 'red'; type = 'soldier'; }
+                else if (placingMode === "blue") { team = 'blue'; type = 'soldier'; }
+                else if (placingMode === "redTank") { team = 'red'; type = 'tank'; }
+                else if (placingMode === "blueTank") { team = 'blue'; type = 'tank'; }
+                else if (placingMode === "healer") { 
+                    team = Math.random() > 0.5 ? 'red' : 'blue'; 
+                    type = 'healer'; 
+                }
+                
                 let blocked = circles.some(c => Math.hypot(c.x - x, c.y - y) < c.radius * 2);
-                if (!blocked) circles.push(new Circle(x, y, placingMode));
+                if (!blocked) circles.push(new Circle(x, y, team, type));
             } else if (placingMode === "delete") {
                 circles = circles.filter(c => Math.hypot(c.x - x, c.y - y) > c.radius);
             }
+            
+            updateStats();
         });
 
+        // Button event listeners
         document.getElementById("placeRed").onclick = () => {
             placingMode = "red";
-            placingNotification.textContent = "Placing: Red";
+            placingNotification.textContent = "Placing: Red Soldier";
             showGhost = true;
         };
         
         document.getElementById("placeBlue").onclick = () => {
             placingMode = "blue";
-            placingNotification.textContent = "Placing: Blue";
+            placingNotification.textContent = "Placing: Blue Soldier";
+            showGhost = true;
+        };
+        
+        document.getElementById("placeRedTank").onclick = () => {
+            placingMode = "redTank";
+            placingNotification.textContent = "Placing: Red Tank";
+            showGhost = true;
+        };
+        
+        document.getElementById("placeBlueTank").onclick = () => {
+            placingMode = "blueTank";
+            placingNotification.textContent = "Placing: Blue Tank";
+            showGhost = true;
+        };
+        
+        document.getElementById("placeHealer").onclick = () => {
+            placingMode = "healer";
+            placingNotification.textContent = "Placing: Healer (Random Team)";
             showGhost = true;
         };
         
@@ -616,6 +896,9 @@
         document.getElementById("startBtn").onclick = () => {
             gameRunning = true;
             showGhost = false;
+            if (battleStartTime === 0) {
+                battleStartTime = performance.now();
+            }
         };
         
         document.getElementById("pauseBtn").onclick = () => {
@@ -623,7 +906,10 @@
             showGhost = true;
         };
 
-        gameLoop();
+        document.getElementById("autoPlaceBtn").onclick = autoPlaceUnits;
+
+        // Initialize - start with empty battlefield
+        gameLoop(); // Start the game loop but don't auto-place units
     </script>
 </body>
 </html>
