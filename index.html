@@ -71,42 +71,45 @@ class Circle {
 
     distanceTo(other){ return Math.hypot(this.x-other.x,this.y-other.y); }
 
-    applySeparation(allies){
+    applySeparation(alliesAndEnemies){
         let pushX=0, pushY=0;
-        for(let other of allies){
+        for(let other of alliesAndEnemies){
             if(other===this) continue;
-            let dx=this.x-other.x, dy=this.y-other.y;
-            let dist=Math.hypot(dx,dy);
-            let minDist=this.radius*2+6;
+            let dx = this.x-other.x, dy = this.y-other.y;
+            let dist = Math.hypot(dx, dy);
+            let minDist = this.radius*2 + 6;
             if(dist<minDist && dist>0){
-                let force=(minDist-dist)/minDist;
-                pushX += dx/dist*force*1.5;
-                pushY += dy/dist*force*1.5;
+                let force = (minDist-dist)/minDist;
+                pushX += dx/dist * force * 1.5;
+                pushY += dy/dist * force * 1.5;
             }
         }
         this.x += pushX; this.y += pushY;
     }
 
-    updateAI(enemies){
+    updateAI(enemies, allies){
         if(!gameRunning || enemies.length===0) return;
+
+        // Combine separation with all units
+        this.applySeparation([...enemies, ...allies]);
+
         let target = enemies.reduce((a,b)=>this.distanceTo(a)<this.distanceTo(b)?a:b);
-        let dx = target.x-this.x, dy=target.y-this.y, dist=Math.hypot(dx,dy);
-        let desiredX = dx/dist, desiredY=dy/dist;
+        let dx = target.x - this.x, dy = target.y - this.y;
+        let dist = Math.hypot(dx, dy);
+        let desiredX = dx/dist, desiredY = dy/dist;
         let stopDist = this.radius + target.radius + 8;
         let speed = this.maxSpeed * Math.min(1, dist/120);
 
         if(dist>stopDist){
-            this.velX += (desiredX*speed - this.velX)*this.turnSpeed;
-            this.velY += (desiredY*speed - this.velY)*this.turnSpeed;
-            this.x += this.velX; this.y += this.velY;
+            this.velX += (desiredX*speed - this.velX) * this.turnSpeed;
+            this.velY += (desiredY*speed - this.velY) * this.turnSpeed;
+            this.x += this.velX;
+            this.y += this.velY;
         } else { this.velX*=0.8; this.velY*=0.8; }
 
-        this.attack(target, dist, stopDist);
-    }
-
-    attack(target, dist, stopDist){
-        let now = performance.now();
-        if(dist > this.radius + 1 && dist <= stopDist){
+        // Attack only if proper distance
+        if(dist>this.radius+1 && dist<=stopDist){
+            let now = performance.now();
             if(now - this.lastAttack >= this.attackCooldown){
                 target.health -= this.attackPower;
                 this.lastAttack = now;
@@ -140,8 +143,9 @@ function gameLoop(){
     let blueTeam = circles.filter(c=>c.team==="blue");
 
     for(let c of circles){
-        c.applySeparation(c.team==="red"?redTeam:blueTeam);
-        c.updateAI(c.team==="red"?blueTeam:redTeam);
+        let allies = circles.filter(x=>x.team===c.team && x.health>0);
+        let enemies = circles.filter(x=>x.team!==c.team && x.health>0);
+        c.updateAI(enemies, allies);
         c.draw();
     }
 
