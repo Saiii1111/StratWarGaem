@@ -8,18 +8,20 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;background:#121212;color:white;display:flex;flex-direction:column;}
 .header{width:100%;padding:10px 20px;background:#1a1a1a;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
-.header h1{font-size:1.5rem;color:#f1c40f;}
+.header h1{font-size:1.5rem;color:#f1c40f;text-shadow:0 0 5px #f1c40f;}
 .controls{display:flex;gap:10px;flex-wrap:wrap;}
-button{padding:7px 15px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;transition:0.2s;font-size:0.9rem;}
-button:hover{opacity:0.85;}
+button{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;transition:0.2s;font-size:0.9rem;box-shadow:0 4px 10px rgba(0,0,0,0.5);}
+button:hover{opacity:0.85;transform:translateY(-2px);}
 #startBtn{background:#2ecc71;color:#121212;}
 #pauseBtn{background:#e67e22;color:#121212;}
 #teamRed{background:#e74c3c;color:white;}
 #teamBlue{background:#3498db;color:white;}
 #deleteTool{background:#95a5a6;color:#121212;}
-.stats{display:flex;gap:20px;padding:10px;background:#1a1a1a;justify-content:center;flex-wrap:wrap;font-size:0.9rem;}
-#notification{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#222;padding:7px 15px;border-radius:5px;color:#f1c40f;font-weight:bold;font-size:0.9rem;z-index:1000;}
+.stats{display:flex;gap:20px;padding:10px;background:#1a1a1a;justify-content:center;flex-wrap:wrap;font-size:0.95rem;}
+#notification{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#222;padding:7px 15px;border-radius:8px;color:#f1c40f;font-weight:bold;font-size:0.95rem;z-index:1000;box-shadow:0 4px 10px rgba(0,0,0,0.7);}
 canvas{flex:1;background:#181818;display:block;cursor:pointer;}
+.health-bar-bg{position:absolute;width:50px;height:6px;background:#333;border-radius:3px;pointer-events:none;}
+.health-bar-fill{height:6px;border-radius:3px;}
 @media (max-width:768px){
     .header{flex-direction:column;align-items:center;}
     .controls{justify-content:center;}
@@ -101,13 +103,15 @@ class Circle{
             ctx.lineWidth=3;
             ctx.stroke();
         }
+        // Health bar
         ctx.fillStyle='#333';
-        ctx.fillRect(this.x-25,this.y-this.radius-15,50,8);
+        ctx.fillRect(this.x-25,this.y-this.radius-12,50,6);
         const hpRatio=this.health/this.maxHealth;
         ctx.fillStyle=hpRatio>0.6?'#2ecc71':hpRatio>0.3?'#f39c12':'#e74c3c';
-        ctx.fillRect(this.x-25,this.y-this.radius-15,50*hpRatio,8);
+        ctx.fillRect(this.x-25,this.y-this.radius-12,50*hpRatio,6);
         ctx.strokeStyle='#fff';
-        ctx.strokeRect(this.x-25,this.y-this.radius-15,50,8);
+        ctx.lineWidth=1;
+        ctx.strokeRect(this.x-25,this.y-this.radius-12,50,6);
     }
     move(){
         // Boundaries
@@ -132,7 +136,7 @@ class Circle{
                 }
             }
         }else{
-            // AI logic
+            // AI logic with encirclement
             let enemies=circles.filter(c=>c.team!==this.team);
             if(enemies.length>0){
                 let nearest=null;
@@ -147,8 +151,8 @@ class Circle{
                     const allies=circles.filter(c=>c.team===this.team && c!==this);
                     const index=allies.indexOf(this);
                     const angle=index/allies.length*Math.PI*2;
-                    const offsetX=Math.cos(angle)*25;
-                    const offsetY=Math.sin(angle)*25;
+                    const offsetX=Math.cos(angle)*30;
+                    const offsetY=Math.sin(angle)*30;
                     const targetX=nearest.x+offsetX;
                     const targetY=nearest.y+offsetY;
                     const dx=targetX-this.x;
@@ -239,13 +243,11 @@ function gameLoop(){
     if(running){
         for(const c of circles)c.move();
         resolveCollisions();
-        // Attack loop: fixed so all enemies take damage
+        // Attack loop
         for(const c of circles){
-            if(c.team==='red'||c.team==='blue'){
-                for(const e of circles){
-                    if(c.team!==e.team && c.isColliding(e)){
-                        c.attack(e);
-                    }
+            for(const e of circles){
+                if(c.team!==e.team && c.isColliding(e)){
+                    c.attack(e);
                 }
             }
         }
@@ -259,5 +261,6 @@ function gameLoop(){
 gameLoop();
 updateNotification();
 </script>
+
 </body>
 </html>
