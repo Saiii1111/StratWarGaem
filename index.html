@@ -110,6 +110,12 @@ class Circle{
         ctx.strokeRect(this.x-25,this.y-this.radius-15,50,8);
     }
     move(){
+        // Boundaries
+        if(this.x<this.radius)this.x=this.radius;
+        if(this.x>canvas.width-this.radius)this.x=canvas.width-this.radius;
+        if(this.y<this.radius)this.y=this.radius;
+        if(this.y>canvas.height-this.radius)this.y=canvas.height-this.radius;
+
         if(this.controlledByPlayer){
             if(this.targetX!==null&&this.targetY!==null){
                 const dx=this.targetX-this.x;
