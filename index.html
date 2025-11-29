@@ -60,24 +60,40 @@
         .header button:active{ transform: translateY(0); }
         .header button:disabled{ opacity: 0.6; cursor: not-allowed; transform: none; }
 
-        #placingNotification { 
-            position: absolute; 
-            top: 100px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            background: rgba(40, 40, 60, 0.95); 
-            padding: 10px 25px; 
-            border-radius: 25px; 
-            font-weight: bold; 
-            color: #f1c40f; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            z-index: 100;
-            border: 1px solid rgba(241, 196, 15, 0.3);
-            backdrop-filter: blur(5px);
-            font-size: 1.1rem;
-            min-width: 200px;
+        /* Updated Notification Bar - from NationCraft */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1500;
+            transform: translateX(150%);
+            transition: transform 0.5s ease;
+            max-width: 320px;
+            font-weight: 600;
+            font-size: 1rem;
             text-align: center;
-            pointer-events: none;
+            border-left: 4px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .notification.warning {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
         }
 
         .stats-container {
@@ -291,7 +307,8 @@
         </div>
     </div>
 
-    <div id="placingNotification">Placing: Auto (Left=Red, Right=Blue)</div>
+    <!-- Updated Notification Bar -->
+    <div class="notification" id="notification">Placing: Auto (Left=Red, Right=Blue)</div>
 
     <div class="stats-container">
         <div class="stats-panel">
@@ -344,7 +361,7 @@
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const placingNotification = document.getElementById("placingNotification");
+        const notification = document.getElementById("notification");
         const gameOverModal = document.getElementById("gameOverModal");
         const winnerTextEl = document.getElementById("winnerText");
 
@@ -367,6 +384,26 @@
         let baseUnitSize = 20;
         let battleStartTime = 0;
         let battleDuration = 0;
+
+        // Show notification function from NationCraft
+        function showNotification(message, type = 'info') {
+            notification.textContent = message;
+            notification.className = 'notification';
+            
+            if (type === 'error') {
+                notification.classList.add('error');
+            } else if (type === 'warning') {
+                notification.classList.add('warning');
+            } else if (type === 'info') {
+                notification.classList.add('info');
+            }
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
 
         canvas.addEventListener("mousemove", e => {
             const rect = canvas.getBoundingClientRect();
@@ -778,6 +815,7 @@
             remainingUnitsEl.textContent = winner === 'red' ? redTeam.length : blueTeam.length;
             
             gameOverModal.style.display = 'flex';
+            showNotification(`${winner === 'red' ? 'Red' : 'Blue'} team wins the battle!`, 'info');
         }
 
         function resetGame() {
@@ -793,7 +831,7 @@
             
             // Reset placing mode to default
             placingMode = "auto";
-            placingNotification.textContent = "Placing: Auto (Left=Red, Right=Blue)";
+            showNotification('Game reset. Ready to place units.', 'info');
         }
 
         function closeModal() {
@@ -824,6 +862,7 @@
             circles.push(new Circle(850, 450, 'blue', 'healer'));
             
             updateStats();
+            showNotification('Auto-placed units on battlefield!', 'info');
         }
 
         function gameLoop() {
@@ -889,9 +928,18 @@
                 }
                 
                 let blocked = circles.some(c => Math.hypot(c.x - x, c.y - y) < c.radius * 2);
-                if (!blocked) circles.push(new Circle(x, y, team, type));
+                if (!blocked) {
+                    circles.push(new Circle(x, y, team, type));
+                    showNotification(`Placed ${type} on ${team} team`, 'info');
+                } else {
+                    showNotification('Cannot place unit here - space occupied', 'warning');
+                }
             } else if (placingMode === "delete") {
+                const beforeCount = circles.length;
                 circles = circles.filter(c => Math.hypot(c.x - x, c.y - y) > c.radius);
+                if (circles.length < beforeCount) {
+                    showNotification('Unit deleted', 'warning');
+                }
             }
             
             updateStats();
@@ -900,31 +948,31 @@
         // Button event listeners
         document.getElementById("placeRed").onclick = () => {
             placingMode = "red";
-            placingNotification.textContent = "Placing: Red Soldier";
+            showNotification("Placing: Red Soldier", 'info');
             showGhost = true;
         };
         
         document.getElementById("placeBlue").onclick = () => {
             placingMode = "blue";
-            placingNotification.textContent = "Placing: Blue Soldier";
+            showNotification("Placing: Blue Soldier", 'info');
             showGhost = true;
         };
         
         document.getElementById("placeTank").onclick = () => {
             placingMode = "tank";
-            placingNotification.textContent = "Placing: Tank (Auto Team)";
+            showNotification("Placing: Tank (Auto Team)", 'info');
             showGhost = true;
         };
         
         document.getElementById("placeHealer").onclick = () => {
             placingMode = "healer";
-            placingNotification.textContent = "Placing: Healer (Auto Team)";
+            showNotification("Placing: Healer (Auto Team)", 'info');
             showGhost = true;
         };
         
         document.getElementById("deleteTool").onclick = () => {
             placingMode = "delete";
-            placingNotification.textContent = "Delete Tool Active";
+            showNotification("Delete Tool Active", 'warning');
             showGhost = false;
         };
         
@@ -934,16 +982,19 @@
             if (battleStartTime === 0) {
                 battleStartTime = performance.now();
             }
+            showNotification("Battle started!", 'info');
         };
         
         document.getElementById("pauseBtn").onclick = () => {
             gameRunning = false;
             showGhost = true;
+            showNotification("Battle paused", 'warning');
         };
 
         document.getElementById("autoPlaceBtn").onclick = autoPlaceUnits;
 
         // Initialize - start with empty battlefield
+        showNotification('Welcome to Circle Battle Simulator! Place units to begin.', 'info');
         gameLoop(); // Start the game loop but don't auto-place units
     </script>
 </body>
