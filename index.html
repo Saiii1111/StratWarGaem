@@ -7,19 +7,24 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;background:#121212;color:white;display:flex;flex-direction:column;}
-.header{width:100%;padding:10px 20px;background:#1a1a1a;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;}
+.header{width:100%;padding:10px 20px;background:#1a1a1a;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
 .header h1{font-size:1.5rem;color:#f1c40f;}
-.controls{display:flex;gap:10px;}
-button{padding:5px 10px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;transition:0.2s;}
-button:hover{opacity:0.8;}
+.controls{display:flex;gap:10px;flex-wrap:wrap;}
+button{padding:7px 15px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;transition:0.2s;font-size:0.9rem;}
+button:hover{opacity:0.85;}
 #startBtn{background:#2ecc71;color:#121212;}
 #pauseBtn{background:#e67e22;color:#121212;}
 #teamRed{background:#e74c3c;color:white;}
 #teamBlue{background:#3498db;color:white;}
 #deleteTool{background:#95a5a6;color:#121212;}
-.stats{display:flex;gap:20px;padding:10px;background:#1a1a1a;justify-content:center;}
-#notification{position:absolute;top:50px;left:50%;transform:translateX(-50%);background:#222;padding:5px 15px;border-radius:5px;color:#f1c40f;font-weight:bold;}
+.stats{display:flex;gap:20px;padding:10px;background:#1a1a1a;justify-content:center;flex-wrap:wrap;font-size:0.9rem;}
+#notification{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#222;padding:7px 15px;border-radius:5px;color:#f1c40f;font-weight:bold;font-size:0.9rem;z-index:1000;}
 canvas{flex:1;background:#181818;display:block;cursor:pointer;}
+@media (max-width:768px){
+    .header{flex-direction:column;align-items:center;}
+    .controls{justify-content:center;}
+    .stats{justify-content:center;}
+}
 </style>
 </head>
 <body>
@@ -40,7 +45,6 @@ canvas{flex:1;background:#181818;display:block;cursor:pointer;}
 <div class="stats">
     <div>Red: <span id="redCount">0</span></div>
     <div>Blue: <span id="blueCount">0</span></div>
-    <div>Time: <span id="gameTime">0</span>s</div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
@@ -55,12 +59,9 @@ let circles=[];
 let selectedCircle=null;
 let placingTool='red'; // 'red', 'blue', 'delete'
 let running=false;
-let gameTime=0;
-let lastTime=Date.now();
 
 const redCountEl=document.getElementById('redCount');
 const blueCountEl=document.getElementById('blueCount');
-const gameTimeEl=document.getElementById('gameTime');
 const startBtn=document.getElementById('startBtn');
 const pauseBtn=document.getElementById('pauseBtn');
 const notificationEl=document.getElementById('notification');
@@ -89,7 +90,6 @@ class Circle{
         this.targetX=null;
         this.targetY=null;
         this.attackCooldown=0;
-        this.encircleAngle=Math.random()*Math.PI*2;
     }
     draw(){
         ctx.beginPath();
@@ -132,15 +132,16 @@ class Circle{
                 }
             }
         }else{
-            let targets=circles.filter(c=>c.team!==this.team);
-            if(targets.length>0){
+            // AI logic
+            let enemies=circles.filter(c=>c.team!==this.team);
+            if(enemies.length>0){
                 let nearest=null;
                 let minDist=Infinity;
-                for(const t of targets){
-                    const dx=t.x-this.x;
-                    const dy=t.y-this.y;
+                for(const e of enemies){
+                    const dx=e.x-this.x;
+                    const dy=e.y-this.y;
                     const d=Math.sqrt(dx*dx+dy*dy);
-                    if(d<minDist){minDist=d;nearest=t;}
+                    if(d<minDist){minDist=d;nearest=e;}
                 }
                 if(nearest){
                     const allies=circles.filter(c=>c.team===this.team && c!==this);
@@ -202,6 +203,7 @@ canvas.addEventListener('click',(e)=>{
     const rect=canvas.getBoundingClientRect();
     const x=e.clientX-rect.left;
     const y=e.clientY-rect.top;
+
     if(placingTool==='delete'){
         for(let i=circles.length-1;i>=0;i--){
             const c=circles[i];
@@ -211,6 +213,7 @@ canvas.addEventListener('click',(e)=>{
         }
         return;
     }
+
     let clicked=null;
     for(let i=circles.length-1;i>=0;i--){
         const c=circles[i];
@@ -218,6 +221,7 @@ canvas.addEventListener('click',(e)=>{
         const dy=c.y-y;
         if(Math.sqrt(dx*dx+dy*dy)<c.radius){clicked=c;break;}
     }
+
     if(clicked && running){
         if(selectedCircle)selectedCircle.controlledByPlayer=false;
         selectedCircle=clicked;
@@ -235,21 +239,19 @@ function gameLoop(){
     if(running){
         for(const c of circles)c.move();
         resolveCollisions();
-        for(let i=0;i<circles.length;i++){
-            for(let j=i+1;j<circles.length;j++){
-                if(circles[i].team!==circles[j].team && circles[i].isColliding(circles[j])){
-                    circles[i].attack(circles[j]);
-                    circles[j].attack(circles[i]);
+        // Attack loop: fixed so all enemies take damage
+        for(const c of circles){
+            if(c.team==='red'||c.team==='blue'){
+                for(const e of circles){
+                    if(c.team!==e.team && c.isColliding(e)){
+                        c.attack(e);
+                    }
                 }
             }
         }
         circles=circles.filter(c=>c.health>0);
         updateCounts();
-        const now=Date.now();
-        gameTime+=(now-lastTime)/1000;
-        lastTime=now;
-        gameTimeEl.textContent=Math.floor(gameTime);
-    }else lastTime=Date.now();
+    }
     for(const c of circles)c.draw();
     requestAnimationFrame(gameLoop);
 }
