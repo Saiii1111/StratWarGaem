@@ -10,7 +10,8 @@
             font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background: linear-gradient(135deg, #0c0c0c, #1a1a2e);
             color:#fff; 
-            overflow-x: hidden;
+            /* Remove scrolling */
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -141,6 +142,8 @@
             box-shadow:0 0 30px rgba(0,0,0,0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
+            /* Prevent canvas from causing scroll */
+            max-width: 100%;
         }
 
         /* Victory Modal */
@@ -402,6 +405,15 @@
                 notification.classList.remove('show');
             }, 3000);
         }
+
+        // Prevent scrolling on the page
+        document.addEventListener('wheel', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
 
         canvas.addEventListener("mousemove", e => {
             const rect = canvas.getBoundingClientRect();
