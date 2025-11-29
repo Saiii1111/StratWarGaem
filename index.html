@@ -292,19 +292,37 @@
             font-size: 0.8rem;
             color: #f1c40f;
         }
+
+        /* Button groups for left and right sides */
+        .unit-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Advanced Circle Battle Simulator</h1>
         <div class="buttons">
-            <button class="soldier-btn" id="placeSoldier">Soldier</button>
-            <button class="special-btn" id="placeTank">Tank</button>
-            <button class="special-btn" id="placeHealer">Healer</button>
-            <button class="delete-btn" id="deleteTool">Delete</button>
-            <button class="start-btn" id="startBtn">Start Battle</button>
-            <button class="pause-btn" id="pauseBtn">Pause</button>
-            <button class="auto-btn" id="autoPlaceBtn">Auto Place</button>
+            <!-- Unit selection buttons on the left -->
+            <div class="unit-buttons">
+                <button class="soldier-btn" id="placeSoldier">Soldier</button>
+                <button class="special-btn" id="placeTank">Tank</button>
+                <button class="special-btn" id="placeHealer">Healer</button>
+                <button class="delete-btn" id="deleteTool">Delete</button>
+            </div>
+            
+            <!-- Control buttons on the right -->
+            <div class="control-buttons">
+                <button class="start-btn" id="startBtn">Start Battle</button>
+                <button class="pause-btn" id="pauseBtn">Pause</button>
+                <button class="auto-btn" id="autoPlaceBtn">Auto Place</button>
+            </div>
         </div>
     </div>
 
