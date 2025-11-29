@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Circle Battle Simulator - TRUE FINALE</title>
+<title>Circle Battle Simulator - FINAL</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Segoe UI',sans-serif; background:#121212; color:#fff; overflow:hidden; }
@@ -71,15 +71,15 @@ class Circle {
 
     distanceTo(other){ return Math.hypot(this.x-other.x,this.y-other.y); }
 
-    applySeparation(all){
+    applySeparation(alliesAndEnemies){
         let pushX=0, pushY=0;
-        for(let other of all){
+        for(let other of alliesAndEnemies){
             if(other===this) continue;
-            let dx=this.x-other.x, dy=this.y-other.y;
-            let dist=Math.hypot(dx,dy);
-            let minDist=this.radius*2+6;
+            let dx = this.x-other.x, dy = this.y-other.y;
+            let dist = Math.hypot(dx, dy);
+            let minDist = this.radius*2 + 6;
             if(dist<minDist && dist>0){
-                let force=(minDist-dist)/minDist;
+                let force = (minDist-dist)/minDist;
                 pushX += dx/dist * force * 1.5;
                 pushY += dy/dist * force * 1.5;
             }
@@ -90,32 +90,24 @@ class Circle {
     updateAI(enemies, allies){
         if(!gameRunning || enemies.length===0) return;
 
-        this.applySeparation([...enemies,...allies]);
+        // Combine separation with all units
+        this.applySeparation([...enemies, ...allies]);
 
         let target = enemies.reduce((a,b)=>this.distanceTo(a)<this.distanceTo(b)?a:b);
-
-        // Encircle logic
-        let sameTeam = allies.filter(a=>a.health>0 && a!==this);
-        let index = sameTeam.indexOf(this);
-        let total = sameTeam.length+1;
-        let angle = ((index+1)/total)*Math.PI*2 + Math.random()*0.15;
-        let encircleRadius = target.radius + 25 + Math.random()*5;
-        let goalX = target.x + Math.cos(angle)*encircleRadius;
-        let goalY = target.y + Math.sin(angle)*encircleRadius;
-
-        let dx = goalX - this.x;
-        let dy = goalY - this.y;
-        let dist = Math.hypot(dx,dy);
+        let dx = target.x - this.x, dy = target.y - this.y;
+        let dist = Math.hypot(dx, dy);
+        let desiredX = dx/dist, desiredY = dy/dist;
         let stopDist = this.radius + target.radius + 8;
         let speed = this.maxSpeed * Math.min(1, dist/120);
 
         if(dist>stopDist){
-            this.velX += ((dx/dist)*speed - this.velX)*this.turnSpeed;
-            this.velY += ((dy/dist)*speed - this.velY)*this.turnSpeed;
-            this.x += this.velX; this.y += this.velY;
+            this.velX += (desiredX*speed - this.velX) * this.turnSpeed;
+            this.velY += (desiredY*speed - this.velY) * this.turnSpeed;
+            this.x += this.velX;
+            this.y += this.velY;
         } else { this.velX*=0.8; this.velY*=0.8; }
 
-        // Attack only in proper range
+        // Attack only if proper distance
         if(dist>this.radius+1 && dist<=stopDist){
             let now = performance.now();
             if(now - this.lastAttack >= this.attackCooldown){
@@ -128,7 +120,7 @@ class Circle {
 
 function drawMap(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(255,255,255,0.05)';
     for(let x=0;x<=canvas.width;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
     for(let y=0;y<=canvas.height;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
     ctx.fillStyle='rgba(231,76,60,0.1)'; ctx.fillRect(0,0,100,canvas.height);
@@ -137,7 +129,7 @@ function drawMap(){
 
 function drawGhost(){
     if(!showGhost || (placingMode!=="red" && placingMode!=="blue")) return;
-    let color="rgba(255,255,255,0.45)";
+    let color = "rgba(255,255,255,0.45)";
     let blocked = circles.some(c=>Math.hypot(c.x-mouseX,c.y-mouseY)<c.radius*2);
     if(blocked) color="rgba(255,0,0,0.45)";
     ctx.beginPath(); ctx.arc(mouseX,mouseY,20,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
@@ -147,8 +139,8 @@ function gameLoop(){
     drawMap();
     drawGhost();
 
-    let redTeam = circles.filter(c=>c.team==="red" && c.health>0);
-    let blueTeam = circles.filter(c=>c.team==="blue" && c.health>0);
+    let redTeam = circles.filter(c=>c.team==="red");
+    let blueTeam = circles.filter(c=>c.team==="blue");
 
     for(let c of circles){
         let allies = circles.filter(x=>x.team===c.team && x.health>0);
