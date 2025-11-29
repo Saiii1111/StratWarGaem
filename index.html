@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>RTS Game with Collision & Health Bars</title>
+    <title>RTS Game Fixed Movement</title>
     <style>
         body {
             margin: 0;
@@ -68,17 +68,16 @@
                 this.maxHp = 100;
                 this.hp = this.maxHp;
                 this.damage = 20;
-                this.attackCooldown = 0; // frames
+                this.attackCooldown = 0;
             }
 
             update() {
-                // Attack cooldown
                 if(this.attackCooldown > 0) this.attackCooldown--;
 
-                if (this.isBlue) this.updateBlue();
+                if(this.isBlue) this.updateBlue();
                 else this.updateRed();
 
-                // Move unit
+                // Move
                 this.x += this.vx;
                 this.y += this.vy;
 
@@ -86,32 +85,33 @@
                 this.x = Math.max(UNIT_RADIUS, Math.min(canvas.width - UNIT_RADIUS, this.x));
                 this.y = Math.max(UNIT_RADIUS, Math.min(canvas.height - UNIT_RADIUS, this.y));
 
+                // Separation & speed limit
                 this.applySeparation();
                 this.limitSpeed();
             }
 
             updateBlue() {
                 const enemy = this.findNearestEnemy();
-                if (enemy && this.distanceTo(enemy) < DETECTION_RANGE) {
+                if(enemy && this.distanceTo(enemy) < DETECTION_RANGE) {
                     this.target = enemy;
                     this.moveToward(enemy.x, enemy.y);
 
-                    if(this.distanceTo(enemy) <= UNIT_RADIUS*2 && this.attackCooldown <= 0){
+                    if(this.distanceTo(enemy) <= UNIT_RADIUS*2 && this.attackCooldown <=0){
                         enemy.hp -= this.damage;
-                        this.attackCooldown = 60; // 1 second at 60fps
-                        if(enemy.hp <= 0){
+                        this.attackCooldown = 60;
+                        if(enemy.hp<=0){
                             const index = redUnits.indexOf(enemy);
                             if(index>-1) redUnits.splice(index,1);
                         }
                     }
-
-                } else if(this.targetX !== null) {
+                } else if(this.targetX!==null) {
                     this.moveToward(this.targetX, this.targetY);
-                    if(this.distanceTo({x:this.targetX,y:this.targetY}) < UNIT_RADIUS) {
-                        this.targetX = null;
-                        this.targetY = null;
+                    if(this.distanceTo({x:this.targetX, y:this.targetY})<UNIT_RADIUS){
+                        this.targetX=null;
+                        this.targetY=null;
                     }
                 } else {
+                    // slow down naturally
                     this.vx *= 0.8;
                     this.vy *= 0.8;
                 }
@@ -119,18 +119,17 @@
 
             updateRed() {
                 const enemy = this.findNearestEnemy();
-                if (enemy && this.distanceTo(enemy) < DETECTION_RANGE) {
+                if(enemy && this.distanceTo(enemy) < DETECTION_RANGE) {
                     this.moveToward(enemy.x, enemy.y);
 
-                    if(this.distanceTo(enemy) <= UNIT_RADIUS*2 && this.attackCooldown <=0){
+                    if(this.distanceTo(enemy)<=UNIT_RADIUS*2 && this.attackCooldown<=0){
                         enemy.hp -= this.damage;
                         this.attackCooldown = 60;
-                        if(enemy.hp <=0){
+                        if(enemy.hp<=0){
                             const index = blueUnits.indexOf(enemy);
                             if(index>-1) blueUnits.splice(index,1);
                         }
                     }
-
                 } else {
                     this.wander();
                 }
@@ -151,11 +150,9 @@
                 const dy = ty - this.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 if(dist>0.5){
-                    this.vx = (dx/dist)*MAX_SPEED;
-                    this.vy = (dy/dist)*MAX_SPEED;
-                } else {
-                    this.vx = 0;
-                    this.vy = 0;
+                    // add movement instead of setting velocity
+                    this.vx += (dx/dist)*0.2;
+                    this.vy += (dy/dist)*0.2;
                 }
             }
 
@@ -167,15 +164,15 @@
                     const dy = this.y - other.y;
                     const dist = Math.sqrt(dx*dx+dy*dy);
                     if(dist<SEPARATION && dist>0){
-                        const push = (SEPARATION-dist)/SEPARATION;
-                        this.vx += (dx/dist)*push*1.5;
-                        this.vy += (dy/dist)*push*1.5;
+                        const push = (SEPARATION-dist)/SEPARATION*0.5;
+                        this.vx += (dx/dist)*push;
+                        this.vy += (dy/dist)*push;
                     }
                 }
             }
 
             limitSpeed(){
-                const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+                const speed = Math.sqrt(this.vx*this.vx+this.vy*this.vy);
                 if(speed>MAX_SPEED){
                     this.vx = (this.vx/speed)*MAX_SPEED;
                     this.vy = (this.vy/speed)*MAX_SPEED;
@@ -186,27 +183,27 @@
                 const enemies = this.isBlue ? redUnits : blueUnits;
                 let nearest = null;
                 let nearestDist = Infinity;
-                for(const enemy of enemies){
-                    const d = this.distanceTo(enemy);
+                for(const e of enemies){
+                    const d = this.distanceTo(e);
                     if(d<nearestDist){
-                        nearestDist = d;
-                        nearest = enemy;
+                        nearestDist=d;
+                        nearest=e;
                     }
                 }
                 return nearest;
             }
 
             distanceTo(other){
-                const dx = this.x - other.x;
-                const dy = this.y - other.y;
-                return Math.sqrt(dx*dx + dy*dy);
+                const dx=this.x-other.x;
+                const dy=this.y-other.y;
+                return Math.sqrt(dx*dx+dy*dy);
             }
 
             draw(){
                 ctx.save();
                 if(this.selected){
-                    ctx.strokeStyle = '#0ff';
-                    ctx.lineWidth = 2;
+                    ctx.strokeStyle='#0ff';
+                    ctx.lineWidth=2;
                     ctx.beginPath();
                     ctx.arc(this.x,this.y,SELECT_RADIUS,0,Math.PI*2);
                     ctx.stroke();
@@ -216,28 +213,23 @@
                 ctx.arc(this.x,this.y,UNIT_RADIUS,0,Math.PI*2);
                 ctx.fill();
 
-                // Draw health bar only if damaged
-                if(this.hp < this.maxHp){
-                    const barWidth = UNIT_RADIUS*2;
-                    const barHeight = 4;
+                // Health bar if damaged
+                if(this.hp<this.maxHp){
+                    const barW = UNIT_RADIUS*2;
+                    const barH = 4;
                     const hpPercent = Math.max(0,this.hp/this.maxHp);
                     ctx.fillStyle = '#333';
-                    ctx.fillRect(this.x-barWidth/2,this.y-UNIT_RADIUS-8,barWidth,barHeight);
+                    ctx.fillRect(this.x-barW/2, this.y-UNIT_RADIUS-8, barW, barH);
                     ctx.fillStyle = hpPercent>0.6?'#4f4': hpPercent>0.3?'#ff4':'#f44';
-                    ctx.fillRect(this.x-barWidth/2,this.y-UNIT_RADIUS-8,barWidth*hpPercent,barHeight);
+                    ctx.fillRect(this.x-barW/2, this.y-UNIT_RADIUS-8, barW*hpPercent, barH);
                 }
-
                 ctx.restore();
             }
         }
 
         function initGame(){
-            for(let i=0;i<8;i++){
-                blueUnits.push(new Unit(100+Math.random()*150,100+Math.random()*150,true));
-            }
-            for(let i=0;i<10;i++){
-                redUnits.push(new Unit(600+Math.random()*150,500+Math.random()*150,false));
-            }
+            for(let i=0;i<8;i++) blueUnits.push(new Unit(100+Math.random()*150,100+Math.random()*150,true));
+            for(let i=0;i<10;i++) redUnits.push(new Unit(600+Math.random()*150,500+Math.random()*150,false));
             updateUI();
         }
 
@@ -252,7 +244,6 @@
             redUnits.forEach(u=>u.draw());
 
             if(isSelecting) drawSelection();
-
             updateUI();
             requestAnimationFrame(gameLoop);
         }
@@ -278,7 +269,7 @@
         }
 
         function getMousePos(e){
-            const rect=canvas.getBoundingClientRect();
+            const rect = canvas.getBoundingClientRect();
             return {x:e.clientX-rect.left, y:e.clientY-rect.top};
         }
 
@@ -306,8 +297,8 @@
                 const col=i%cols;
                 const offsetX=(col-(cols-1)/2)*spacing;
                 const offsetY=(row-(cols-1)/2)*spacing;
-                u.targetX = x+offsetX;
-                u.targetY = y+offsetY;
+                u.targetX=x+offsetX;
+                u.targetY=y+offsetY;
                 u.target=null;
             });
         }
