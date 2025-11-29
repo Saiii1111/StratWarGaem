@@ -35,294 +35,279 @@
     </div>
     <canvas id="gameCanvas" width="1000" height="800"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-        const UNIT_RADIUS = 12;
-        const SELECT_RADIUS = 16;
-        const DETECTION_RANGE = 120;
-        const MAX_SPEED = 2.5;
-        const SEPARATION = 25;
+const UNIT_RADIUS = 12;
+const SELECT_RADIUS = 16;
+const DETECTION_RANGE = 120;
+const MAX_SPEED = 2.5;
+const SEPARATION = 25;
 
-        let blueUnits = [];
-        let redUnits = [];
-        let selectedUnits = [];
-        let isSelecting = false;
-        let selectionStart = {x:0,y:0};
-        let selectionEnd = {x:0,y:0};
+let blueUnits = [];
+let redUnits = [];
+let selectedUnits = [];
+let isSelecting = false;
+let selectionStart = {x:0,y:0};
+let selectionEnd = {x:0,y:0};
 
-        class Unit {
-            constructor(x, y, isBlue){
-                this.x = x;
-                this.y = y;
-                this.vx = 0;
-                this.vy = 0;
-                this.targetX = null;
-                this.targetY = null;
-                this.isBlue = isBlue;
-                this.selected = false;
-                this.hp = 100;
-                this.maxHp = 100;
-                this.target = null;
-                this.wanderTimer = 0;
+class Unit {
+    constructor(x,y,isBlue){
+        this.x=x; this.y=y;
+        this.vx=0; this.vy=0;
+        this.targetX=null; this.targetY=null;
+        this.isBlue=isBlue;
+        this.selected=false;
+        this.hp=100; this.maxHp=100;
+        this.target=null;
+        this.wanderTimer=0;
+        this.attackCooldown=0;
+    }
+
+    update(){
+        if(this.isBlue) this.updateBlue();
+        else this.updateRed();
+
+        this.x+=this.vx;
+        this.y+=this.vy;
+
+        this.x=Math.max(UNIT_RADIUS,Math.min(canvas.width-UNIT_RADIUS,this.x));
+        this.y=Math.max(UNIT_RADIUS,Math.min(canvas.height-UNIT_RADIUS,this.y));
+
+        this.applySeparation();
+        this.limitSpeed();
+
+        if(this.attackCooldown>0) this.attackCooldown--;
+    }
+
+    updateBlue(){
+        const enemy=this.findNearestEnemy();
+        if(enemy && this.distanceTo(enemy)<DETECTION_RANGE){
+            this.target=enemy;
+            this.attackTarget(enemy);
+        } else if(this.targetX!==null && this.targetY!==null){
+            this.moveToward(this.targetX,this.targetY);
+            if(this.distanceTo({x:this.targetX,y:this.targetY})<1){
+                this.targetX=null;
+                this.targetY=null;
             }
+        } else {
+            this.vx*=0.9; this.vy*=0.9;
+        }
+    }
 
-            update(){
-                if(this.isBlue){
-                    this.updateBlue();
-                } else {
-                    this.updateRed();
-                }
+    updateRed(){
+        const enemy=this.findNearestEnemy();
+        if(enemy && this.distanceTo(enemy)<DETECTION_RANGE){
+            this.target=enemy;
+            this.attackTarget(enemy);
+        } else {
+            this.wander();
+        }
+    }
 
-                this.x += this.vx;
-                this.y += this.vy;
+    attackTarget(enemy){
+        if(this.distanceTo(enemy)<=UNIT_RADIUS*2 && this.attackCooldown<=0){
+            enemy.hp-=1; // damage per frame
+            this.attackCooldown=15;
+        } else {
+            this.moveToward(enemy.x,enemy.y);
+        }
+    }
 
-                this.x = Math.max(UNIT_RADIUS, Math.min(canvas.width - UNIT_RADIUS, this.x));
-                this.y = Math.max(UNIT_RADIUS, Math.min(canvas.height - UNIT_RADIUS, this.y));
+    wander(){
+        this.wanderTimer--;
+        if(this.wanderTimer<=0){
+            const angle=Math.random()*Math.PI*2;
+            this.vx+=Math.cos(angle)*0.3;
+            this.vy+=Math.sin(angle)*0.3;
+            this.wanderTimer=60+Math.random()*60;
+        }
+    }
 
-                this.applySeparation();
-                this.limitSpeed();
-            }
+    moveToward(tx,ty){
+        const dx=tx-this.x, dy=ty-this.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist>0){
+            this.vx+=(dx/dist)*0.3;
+            this.vy+=(dy/dist)*0.3;
+        }
+    }
 
-            updateBlue(){
-                const enemy = this.findNearestEnemy();
-                if(enemy && this.distanceTo(enemy) < DETECTION_RANGE){
-                    this.target = enemy;
-                    this.moveToward(enemy.x, enemy.y);
-                } else if(this.targetX !== null && this.targetY !== null){
-                    this.moveToward(this.targetX, this.targetY);
-                    if(this.distanceTo({x:this.targetX,y:this.targetY})<1){
-                        this.targetX=null;
-                        this.targetY=null;
-                    }
-                } else {
-                    this.vx *= 0.9;
-                    this.vy *= 0.9;
-                }
-            }
-
-            updateRed(){
-                const enemy = this.findNearestEnemy();
-                if(enemy && this.distanceTo(enemy)<DETECTION_RANGE){
-                    this.moveToward(enemy.x, enemy.y);
-                } else {
-                    this.wander();
-                }
-            }
-
-            wander(){
-                this.wanderTimer--;
-                if(this.wanderTimer<=0){
-                    const angle = Math.random()*Math.PI*2;
-                    this.vx += Math.cos(angle)*0.3;
-                    this.vy += Math.sin(angle)*0.3;
-                    this.wanderTimer = 60 + Math.random()*60;
-                }
-            }
-
-            moveToward(tx, ty){
-                const dx = tx - this.x;
-                const dy = ty - this.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if(dist>0){
-                    this.vx += (dx/dist)*0.3;
-                    this.vy += (dy/dist)*0.3;
-                }
-            }
-
-            applySeparation(){
-                const units = this.isBlue ? blueUnits : redUnits;
-                let moveX=0, moveY=0, count=0;
-                for(const other of units){
-                    if(other===this) continue;
-                    const dist = this.distanceTo(other);
-                    if(dist<SEPARATION){
-                        const angle = Math.atan2(this.y-other.y, this.x-other.x);
-                        moveX += Math.cos(angle)*0.5;
-                        moveY += Math.sin(angle)*0.5;
-                        count++;
-                    }
-                }
-                if(count>0){
-                    this.vx += moveX/count;
-                    this.vy += moveY/count;
-                }
-            }
-
-            limitSpeed(){
-                const speed = Math.sqrt(this.vx*this.vx+this.vy*this.vy);
-                if(speed>MAX_SPEED){
-                    this.vx=(this.vx/speed)*MAX_SPEED;
-                    this.vy=(this.vy/speed)*MAX_SPEED;
-                }
-            }
-
-            distanceTo(other){
-                const dx = this.x - other.x;
-                const dy = this.y - other.y;
-                return Math.sqrt(dx*dx+dy*dy);
-            }
-
-            findNearestEnemy(){
-                const enemies = this.isBlue?redUnits:blueUnits;
-                let nearest=null;
-                let nearestDist=Infinity;
-                for(const enemy of enemies){
-                    const d=this.distanceTo(enemy);
-                    if(d<nearestDist){
-                        nearestDist=d;
-                        nearest=enemy;
-                    }
-                }
-                return nearest;
-            }
-
-            draw(){
-                ctx.save();
-
-                if(this.selected){
-                    ctx.strokeStyle = '#0ff';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(this.x,this.y,SELECT_RADIUS,0,Math.PI*2);
-                    ctx.stroke();
-                }
-
-                ctx.fillStyle = this.isBlue?'#48f':'#f44';
-                ctx.beginPath();
-                ctx.arc(this.x,this.y,UNIT_RADIUS,0,Math.PI*2);
-                ctx.fill();
-
-                // Draw healthbar if damaged
-                if(this.hp<this.maxHp){
-                    const barWidth=UNIT_RADIUS*2;
-                    const barHeight=4;
-                    const barX=this.x-barWidth/2;
-                    const barY=this.y-UNIT_RADIUS-6;
-                    ctx.fillStyle='#333';
-                    ctx.fillRect(barX,barY,barWidth,barHeight);
-                    const hpPercent=this.hp/this.maxHp;
-                    ctx.fillStyle=hpPercent>0.6?'#4f4':hpPercent>0.3?'#ff4':'#f44';
-                    ctx.fillRect(barX,barY,barWidth*hpPercent,barHeight);
-                }
-
-                ctx.restore();
+    applySeparation(){
+        const units=this.isBlue?blueUnits:redUnits;
+        let moveX=0, moveY=0, count=0;
+        for(const other of units){
+            if(other===this) continue;
+            const dist=this.distanceTo(other);
+            if(dist<SEPARATION){
+                const angle=Math.atan2(this.y-other.y,this.x-other.x);
+                moveX+=Math.cos(angle)*0.5;
+                moveY+=Math.sin(angle)*0.5;
+                count++;
             }
         }
+        if(count>0){ this.vx+=moveX/count; this.vy+=moveY/count; }
+    }
 
-        function initGame(){
-            for(let i=0;i<8;i++){
-                blueUnits.push(new Unit(100+Math.random()*150,100+Math.random()*150,true));
-            }
-            for(let i=0;i<10;i++){
-                redUnits.push(new Unit(600+Math.random()*150,500+Math.random()*150,false));
-            }
-            updateUI();
+    limitSpeed(){
+        const speed=Math.sqrt(this.vx*this.vx+this.vy*this.vy);
+        if(speed>MAX_SPEED){ this.vx=(this.vx/speed)*MAX_SPEED; this.vy=(this.vy/speed)*MAX_SPEED; }
+    }
+
+    distanceTo(other){ const dx=this.x-other.x; const dy=this.y-other.y; return Math.sqrt(dx*dx+dy*dy); }
+
+    findNearestEnemy(){
+        const enemies=this.isBlue?redUnits:blueUnits;
+        let nearest=null, nearestDist=Infinity;
+        for(const e of enemies){
+            const d=this.distanceTo(e);
+            if(d<nearestDist){ nearestDist=d; nearest=e; }
         }
+        return nearest;
+    }
 
-        function gameLoop(){
-            ctx.fillStyle='#2a2a2a';
-            ctx.fillRect(0,0,canvas.width,canvas.height);
+    draw(){
+        ctx.save();
 
-            blueUnits.forEach(u=>u.update());
-            redUnits.forEach(u=>u.update());
-
-            blueUnits.forEach(u=>u.draw());
-            redUnits.forEach(u=>u.draw());
-
-            if(isSelecting) drawSelection();
-
-            updateUI();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function drawSelection(){
-            ctx.save();
+        if(this.selected){
             ctx.strokeStyle='#0ff';
-            ctx.fillStyle='rgba(0,255,255,0.1)';
-            ctx.lineWidth=1;
-            const x=Math.min(selectionStart.x,selectionEnd.x);
-            const y=Math.min(selectionStart.y,selectionEnd.y);
-            const w=Math.abs(selectionEnd.x-selectionStart.x);
-            const h=Math.abs(selectionEnd.y-selectionStart.y);
-            ctx.fillRect(x,y,w,h);
-            ctx.strokeRect(x,y,w,h);
-            ctx.restore();
+            ctx.lineWidth=2;
+            ctx.beginPath();
+            ctx.arc(this.x,this.y,SELECT_RADIUS,0,Math.PI*2);
+            ctx.stroke();
         }
 
-        function updateUI(){
-            document.getElementById('blueCount').textContent=blueUnits.length;
-            document.getElementById('redCount').textContent=redUnits.length;
-            document.getElementById('selectedCount').textContent=selectedUnits.length;
+        ctx.fillStyle=this.isBlue?'#48f':'#f44';
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,UNIT_RADIUS,0,Math.PI*2);
+        ctx.fill();
+
+        if(this.hp<this.maxHp){
+            const barWidth=UNIT_RADIUS*2;
+            const barHeight=4;
+            const barX=this.x-barWidth/2;
+            const barY=this.y-UNIT_RADIUS-6;
+            ctx.fillStyle='#333';
+            ctx.fillRect(barX,barY,barWidth,barHeight);
+            const hpPercent=this.hp/this.maxHp;
+            ctx.fillStyle=hpPercent>0.6?'#4f4':hpPercent>0.3?'#ff4':'#f44';
+            ctx.fillRect(barX,barY,barWidth*hpPercent,barHeight);
         }
 
-        function getMousePos(e){
-            const rect=canvas.getBoundingClientRect();
-            return {x:e.clientX-rect.left,y:e.clientY-rect.top};
+        ctx.restore();
+    }
+}
+
+function initGame(){
+    for(let i=0;i<8;i++) blueUnits.push(new Unit(100+Math.random()*150,100+Math.random()*150,true));
+    for(let i=0;i<10;i++) redUnits.push(new Unit(600+Math.random()*150,500+Math.random()*150,false));
+    updateUI();
+}
+
+function gameLoop(){
+    ctx.fillStyle='#2a2a2a';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    blueUnits.forEach(u=>u.update());
+    redUnits.forEach(u=>u.update());
+
+    blueUnits.forEach(u=>u.draw());
+    redUnits.forEach(u=>u.draw());
+
+    if(isSelecting) drawSelection();
+    updateUI();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function drawSelection(){
+    ctx.save();
+    ctx.strokeStyle='#0ff';
+    ctx.fillStyle='rgba(0,255,255,0.1)';
+    ctx.lineWidth=1;
+    const x=Math.min(selectionStart.x,selectionEnd.x);
+    const y=Math.min(selectionStart.y,selectionEnd.y);
+    const w=Math.abs(selectionEnd.x-selectionStart.x);
+    const h=Math.abs(selectionEnd.y-selectionStart.y);
+    ctx.fillRect(x,y,w,h);
+    ctx.strokeRect(x,y,w,h);
+    ctx.restore();
+}
+
+function updateUI(){
+    document.getElementById('blueCount').textContent=blueUnits.length;
+    document.getElementById('redCount').textContent=redUnits.length;
+    document.getElementById('selectedCount').textContent=selectedUnits.length;
+}
+
+function getMousePos(e){
+    const rect=canvas.getBoundingClientRect();
+    return {x:e.clientX-rect.left, y:e.clientY-rect.top};
+}
+
+// Selection logic with Ctrl to add
+function selectInRect(rect, additive=false){
+    if(!additive) selectedUnits=[];
+    const x1=Math.min(rect.startX,rect.endX);
+    const x2=Math.max(rect.startX,rect.endX);
+    const y1=Math.min(rect.startY,rect.endY);
+    const y2=Math.max(rect.startY,rect.endY);
+
+    blueUnits.forEach(u=>{
+        if(u.x>=x1 && u.x<=x2 && u.y>=y1 && u.y<=y2){
+            u.selected=true;
+            if(!selectedUnits.includes(u)) selectedUnits.push(u);
+        } else if(!additive){
+            u.selected=false;
         }
+    });
+}
 
-        function selectInRect(rect){
-            selectedUnits=[];
-            const x1=Math.min(rect.startX,rect.endX);
-            const x2=Math.max(rect.startX,rect.endX);
-            const y1=Math.min(rect.startY,rect.endY);
-            const y2=Math.max(rect.startY,rect.endY);
-            blueUnits.forEach(u=>{
-                u.selected=false;
-                if(u.x>=x1 && u.x<=x2 && u.y>=y1 && u.y<=y2){
-                    u.selected=true;
-                    selectedUnits.push(u);
-                }
-            });
-        }
+function moveSelected(x,y){
+    if(selectedUnits.length===0) return;
+    const cols=Math.ceil(Math.sqrt(selectedUnits.length));
+    const spacing=UNIT_RADIUS*3;
+    selectedUnits.forEach((u,i)=>{
+        const row=Math.floor(i/cols);
+        const col=i%cols;
+        const offsetX=(col-(cols-1)/2)*spacing;
+        const offsetY=(row-(cols-1)/2)*spacing;
+        u.targetX=x+offsetX;
+        u.targetY=y+offsetY;
+        u.target=null;
+    });
+}
 
-        function moveSelected(x,y){
-            if(selectedUnits.length===0) return;
-            const cols=Math.ceil(Math.sqrt(selectedUnits.length));
-            const spacing=UNIT_RADIUS*3;
-            selectedUnits.forEach((u,i)=>{
-                const row=Math.floor(i/cols);
-                const col=i%cols;
-                const offsetX=(col-(cols-1)/2)*spacing;
-                const offsetY=(row-(cols-1)/2)*spacing;
-                u.targetX=x+offsetX;
-                u.targetY=y+offsetY;
-                u.target=null;
-            });
-        }
+canvas.addEventListener('mousedown', e=>{
+    const pos=getMousePos(e);
+    if(e.button===0){
+        isSelecting=true;
+        selectionStart={...pos};
+        selectionEnd={...pos};
+    }
+});
 
-        canvas.addEventListener('mousedown', e=>{
-            const pos=getMousePos(e);
-            if(e.button===0){
-                isSelecting=true;
-                selectionStart={...pos};
-                selectionEnd={...pos};
-            }
-        });
+canvas.addEventListener('mousemove', e=>{
+    if(isSelecting) selectionEnd={...getMousePos(e)};
+});
 
-        canvas.addEventListener('mousemove', e=>{
-            const pos=getMousePos(e);
-            if(isSelecting){
-                selectionEnd={...pos};
-            }
-        });
+canvas.addEventListener('mouseup', e=>{
+    if(e.button===0 && isSelecting){
+        isSelecting=false;
+        selectInRect({startX:selectionStart.x,startY:selectionStart.y,endX:selectionEnd.x,endY:selectionEnd.y}, e.ctrlKey);
+    }
+});
 
-        canvas.addEventListener('mouseup', e=>{
-            if(e.button===0 && isSelecting){
-                isSelecting=false;
-                selectInRect({startX:selectionStart.x,startY:selectionStart.y,endX:selectionEnd.x,endY:selectionEnd.y});
-            }
-        });
+canvas.addEventListener('contextmenu', e=>{
+    e.preventDefault();
+    const pos=getMousePos(e);
+    moveSelected(pos.x,pos.y);
+});
 
-        canvas.addEventListener('contextmenu', e=>{
-            e.preventDefault();
-            const pos=getMousePos(e);
-            moveSelected(pos.x,pos.y);
-        });
-
-        initGame();
-        gameLoop();
-    </script>
+initGame();
+gameLoop();
+</script>
 </body>
 </html>
