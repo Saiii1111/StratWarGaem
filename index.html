@@ -607,8 +607,8 @@
 
         // Map boundaries
         const mapPadding = 20;
-        // Close combat range - units must be very close to attack
-        const COMBAT_RANGE = 35;
+        // EXTREMELY CLOSE combat range - units must be literally touching to attack
+        const COMBAT_RANGE = 5;
 
         // Initialize canvas size
         resizeCanvas();
@@ -835,16 +835,16 @@
                     this.maxHealth = 100;
                     this.attackPower = team === 'red' ? 10 : 12;
                     this.attackCooldown = 600;
-                    this.maxSpeed = 1.2 * sizeMultiplier;
-                    this.turnSpeed = 0.12;
+                    this.maxSpeed = 1.8 * sizeMultiplier;
+                    this.turnSpeed = 0.15;
                 } else if (type === 'tank') {
                     this.radius = baseUnitSize * 1.4 * sizeMultiplier;
                     this.health = 200;
                     this.maxHealth = 200;
                     this.attackPower = team === 'red' ? 18 : 20;
                     this.attackCooldown = 800;
-                    this.maxSpeed = 0.6 * sizeMultiplier;
-                    this.turnSpeed = 0.08;
+                    this.maxSpeed = 1.0 * sizeMultiplier;
+                    this.turnSpeed = 0.1;
                 } else if (type === 'healer') {
                     this.radius = baseUnitSize * sizeMultiplier;
                     this.health = 80;
@@ -852,9 +852,9 @@
                     this.attackPower = 0;
                     this.healPower = 8;
                     this.healCooldown = 400;
-                    this.maxSpeed = 0.9 * sizeMultiplier;
-                    this.turnSpeed = 0.1;
-                    this.healRange = 60;
+                    this.maxSpeed = 1.5 * sizeMultiplier;
+                    this.turnSpeed = 0.12;
+                    this.healRange = 40;
                 }
                 
                 this.lastAttack = 0;
@@ -929,11 +929,11 @@
                     if (other === this) continue;
                     let dx = this.x - other.x, dy = this.y - other.y;
                     let dist = Math.hypot(dx, dy);
-                    let minDist = this.radius + other.radius + 4;
+                    let minDist = this.radius + other.radius + 2;
                     if (dist < minDist && dist > 0) {
                         let force = (minDist - dist) / minDist;
-                        pushX += dx / dist * force * 1.2;
-                        pushY += dy / dist * force * 1.2;
+                        pushX += dx / dist * force * 1.5;
+                        pushY += dy / dist * force * 1.5;
                     }
                 }
                 this.x += pushX;
@@ -957,9 +957,9 @@
                         let dx = target.x - this.x, dy = target.y - this.y;
                         let dist = Math.hypot(dx, dy);
                         
-                        if (dist > this.radius + target.radius + 5) {
+                        if (dist > this.radius + target.radius + 2) {
                             let desiredX = dx / dist, desiredY = dy / dist;
-                            let speed = this.maxSpeed * Math.min(1, dist / 80);
+                            let speed = this.maxSpeed;
                             this.velX += (desiredX * speed - this.velX) * this.turnSpeed;
                             this.velY += (desiredY * speed - this.velY) * this.turnSpeed;
                             this.x += this.velX;
@@ -995,24 +995,24 @@
                 let dist = Math.hypot(dx, dy);
                 let desiredX = dx / dist, desiredY = dy / dist;
                 
-                // CLOSE COMBAT ONLY: Units must be very close to attack
-                let attackRange = this.radius + target.radius + 5;
+                // EXTREMELY CLOSE COMBAT: Units must be literally touching to attack
+                let touchDistance = this.radius + target.radius + 1;
                 
-                if (dist > attackRange) {
-                    // Move toward enemy but stop at combat range
-                    let moveDist = Math.max(0, dist - COMBAT_RANGE);
-                    let speed = this.maxSpeed * Math.min(1, moveDist / 100);
+                if (dist > touchDistance) {
+                    // Move toward enemy at full speed until literally touching
+                    let speed = this.maxSpeed;
                     this.velX += (desiredX * speed - this.velX) * this.turnSpeed;
                     this.velY += (desiredY * speed - this.velY) * this.turnSpeed;
                     this.x += this.velX;
                     this.y += this.velY;
                 } else {
-                    this.velX *= 0.8;
-                    this.velY *= 0.8;
+                    // Literally touching - maintain contact but don't push through
+                    this.velX *= 0.7;
+                    this.velY *= 0.7;
                 }
 
-                // Attack only when in very close range
-                if (dist <= COMBAT_RANGE && this.type !== 'healer') {
+                // Attack only when literally touching
+                if (dist <= touchDistance && this.type !== 'healer') {
                     let now = performance.now();
                     if (now - this.lastAttack >= this.attackCooldown) {
                         const damageMultiplier = getDirectionalDamageMultiplier(this, target);
