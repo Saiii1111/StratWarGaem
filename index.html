@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Battle Simulator - Active Healers</title>
+    <title>Neon Battle Simulator - Smart Healers</title>
     <style>
         * { 
             margin: 0; 
@@ -155,7 +155,7 @@
             align-items: center;
             padding: 6px 0;
             font-size: 0.8rem;
-            border-bottom: 1px solid #404040;
+            border-bottom = 1px solid #404040;
         }
 
         .stat-row:last-child {
@@ -270,7 +270,7 @@
         .modal-content {
             background: #2d2d2d;
             padding: 24px;
-            border-radius: 12px;
+            border-radius = 12px;
             text-align: center;
             width: 100%;
             max-width: 400px;
@@ -479,7 +479,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Neon Battle Simulator - Active Healers</h1>
+        <h1>Neon Battle Simulator - Smart Healers</h1>
         <div class="button-groups">
             <div class="button-row">
                 <button class="soldier-btn" id="placeSoldier">👤 Soldier</button>
@@ -606,10 +606,13 @@
         let battleStartTime = 0;
         let battleDuration = 0;
 
+        // Damage tracking for healing priority
+        let damageHistory = new Map(); // unitId -> last time they took damage
+
         // Map boundaries
         const mapPadding = 20;
         const COMBAT_RANGE = 5;
-        const HEALER_MAX_DISTANCE = 100; // Max distance healers will go to heal
+        const HEALER_MAX_DISTANCE = 120;
 
         // Initialize canvas size
         resizeCanvas();
@@ -736,6 +739,11 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
             }
+        }
+
+        // Track when units take damage
+        function trackDamage(unitId) {
+            damageHistory.set(unitId, Date.now());
         }
 
         // Get directional damage multiplier
@@ -933,7 +941,9 @@
                     this.healRange = 40;
                     this.currentHealTarget = null;
                     this.lastHealEffect = 0;
-                    this.healSearchRadius = 150; // How far they'll look for teammates to heal
+                    this.healSearchRadius = 200; // Increased search radius
+                    this.protectionTarget = null; // Who this healer is following for protection
+                    this.lastTargetSwitch = 0;
                 }
                 
                 this.lastAttack = 0;
@@ -942,6 +952,7 @@
                 this.velY = 0;
                 this.id = Math.random().toString(36).substr(2, 9);
                 this.facingAngle = 0;
+                this.lastHealth = this.health;
             }
 
             draw() {
@@ -1017,6 +1028,12 @@
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
+                
+                // Track if this unit took damage this frame
+                if (this.health < this.lastHealth) {
+                    trackDamage(this.id);
+                }
+                this.lastHealth = this.health;
             }
 
             distanceTo(other) {
@@ -1044,30 +1061,140 @@
                 this.y = Math.max(mapPadding + this.radius, Math.min(canvas.height - mapPadding - this.radius, this.y));
             }
 
+            findBestTarget(allies, enemies) {
+                const now = Date.now();
+                const fiveSecondsAgo = now - 5000;
+                
+                // Filter allies that are alive and not this healer
+                const availableAllies = allies.filter(a => a !== this && a.health > 0);
+                
+                if (availableAllies.length === 0) return null;
+                
+                // Score each ally based on multiple factors
+                let bestTarget = null;
+                let bestScore = -Infinity;
+                
+                for (let ally of availableAllies) {
+                    let score = 0;
+                    const dist = this.distanceTo(ally);
+                    
+                    // 1. PRIORITY: Recently took damage (most important!)
+                    if (damageHistory.has(ally.id)) {
+                        const lastDamageTime = damageHistory.get(ally.id);
+                        const secondsSinceDamage = (now - lastDamageTime) / 1000;
+                        
+                        if (secondsSinceDamage < 3) {
+                            // Very high priority for units taking damage RIGHT NOW
+                            score += 100 * (3 - secondsSinceDamage);
+                        }
+                    }
+                    
+                    // 2. Health percentage (lower = higher priority)
+                    const healthPercent = ally.health / ally.maxHealth;
+                    score += (1 - healthPercent) * 80;
+                    
+                    // 3. Unit type priority (tanks > soldiers > healers)
+                    if (ally.type === 'tank') score += 30;
+                    else if (ally.type === 'soldier') score += 20;
+                    else if (ally.type === 'healer') score += 10;
+                    
+                    // 4. Distance penalty (further away = lower priority)
+                    if (dist > this.healRange) {
+                        score -= (dist - this.healRange) * 0.5;
+                    } else {
+                        score += 20; // Bonus for being in range
+                    }
+                    
+                    // 5. How many other healers are targeting this ally
+                    const otherHealersTargeting = circles.filter(c => 
+                        c.type === 'healer' && 
+                        c.team === this.team && 
+                        c !== this && 
+                        c.currentHealTarget === ally.id
+                    ).length;
+                    
+                    // Penalize if too many healers already on this target
+                    score -= otherHealersTargeting * 15;
+                    
+                    // 6. Bonus for being our current protection target
+                    if (this.protectionTarget === ally.id) {
+                        score += 25;
+                    }
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestTarget = ally;
+                    }
+                }
+                
+                return bestTarget;
+            }
+
+            findProtectionTarget(allies) {
+                // Find the best unit to follow for protection
+                const availableAllies = allies.filter(a => a !== this && a.health > 0);
+                
+                if (availableAllies.length === 0) return null;
+                
+                let bestTarget = null;
+                let bestScore = -Infinity;
+                
+                for (let ally of availableAllies) {
+                    let score = 0;
+                    
+                    // Prefer tanks for protection (high health)
+                    if (ally.type === 'tank') score += 50;
+                    else if (ally.type === 'soldier') score += 30;
+                    
+                    // Prefer units with high health
+                    const healthPercent = ally.health / ally.maxHealth;
+                    score += healthPercent * 40;
+                    
+                    // Prefer units that are in combat (taking damage)
+                    if (damageHistory.has(ally.id)) {
+                        const lastDamageTime = damageHistory.get(ally.id);
+                        const secondsSinceDamage = (Date.now() - lastDamageTime) / 1000;
+                        if (secondsSinceDamage < 5) {
+                            score += 60 * (1 - secondsSinceDamage / 5);
+                        }
+                    }
+                    
+                    // Distance matters
+                    const dist = this.distanceTo(ally);
+                    score -= dist * 0.3;
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestTarget = ally;
+                    }
+                }
+                
+                return bestTarget;
+            }
+
             updateAI(enemies, allies) {
                 if (!gameRunning) return;
 
                 this.applySeparation([...enemies, ...allies]);
 
-                // HEALER AI - Actively move to heal teammates
+                // HEALER AI - Smart healing that follows teammates in combat
                 if (this.type === 'healer') {
-                    // Find all allies that could use healing (below 90% health)
-                    const alliesNeedingHealing = allies.filter(a => 
-                        a.health < a.maxHealth * 0.9 && 
-                        a !== this && 
-                        this.distanceTo(a) <= this.healSearchRadius
-                    );
+                    const now = Date.now();
                     
-                    if (alliesNeedingHealing.length > 0) {
-                        // Sort by how much healing they need (lowest health first)
-                        alliesNeedingHealing.sort((a, b) => {
-                            const aNeed = (a.maxHealth - a.health) / a.maxHealth;
-                            const bNeed = (b.maxHealth - b.health) / b.maxHealth;
-                            return bNeed - aNeed; // Most needy first
-                        });
-                        
-                        let target = alliesNeedingHealing[0];
-                        let distToTarget = this.distanceTo(target);
+                    // Update protection target occasionally
+                    if (!this.protectionTarget || now - this.lastTargetSwitch > 3000) {
+                        const newProtectionTarget = this.findProtectionTarget(allies);
+                        if (newProtectionTarget) {
+                            this.protectionTarget = newProtectionTarget.id;
+                            this.lastTargetSwitch = now;
+                        }
+                    }
+                    
+                    // Find the best healing target
+                    const bestTarget = this.findBestTarget(allies, enemies);
+                    
+                    if (bestTarget) {
+                        const distToTarget = this.distanceTo(bestTarget);
                         
                         // If we're in healing range, heal the target
                         if (distToTarget <= this.healRange) {
@@ -1076,53 +1203,61 @@
                             this.velY *= 0.8;
                             
                             // Heal ally
-                            let now = performance.now();
                             if (now - this.lastHeal >= this.healCooldown) {
-                                const healAmount = Math.min(this.healPower, target.maxHealth - target.health);
-                                target.health += healAmount;
+                                const healAmount = Math.min(this.healPower, bestTarget.maxHealth - bestTarget.health);
+                                bestTarget.health += healAmount;
                                 this.lastHeal = now;
                                 
                                 // Mark the unit as being healed by this healer
-                                target.currentHealer = this.id;
+                                bestTarget.currentHealer = this.id;
                                 setTimeout(() => {
-                                    if (target.currentHealer === this.id) {
-                                        target.currentHealer = null;
+                                    if (bestTarget.currentHealer === this.id) {
+                                        bestTarget.currentHealer = null;
                                     }
                                 }, 500);
                                 
                                 // Create healing effect
                                 const healEffect = new HealingEffect(
                                     this.x, this.y,
-                                    target.x, target.y,
+                                    bestTarget.x, bestTarget.y,
                                     healAmount
                                 );
-                                healEffect.healingUnitId = target.id;
+                                healEffect.healingUnitId = bestTarget.id;
                                 healingEffects.push(healEffect);
                                 
                                 // Show damage/heal text
                                 damageTexts.push(new DamageText(
-                                    target.x,
-                                    target.y - target.radius - 10,
+                                    bestTarget.x,
+                                    bestTarget.y - bestTarget.radius - 10,
                                     healAmount,
                                     true
                                 ));
                             }
                             
                             // Set current healing target
-                            this.currentHealTarget = target.id;
+                            this.currentHealTarget = bestTarget.id;
                         } 
-                        // If not in range, move toward the target to heal them
+                        // If not in range, move toward the target
                         else {
-                            let dx = target.x - this.x, dy = target.y - this.y;
+                            let dx = bestTarget.x - this.x;
+                            let dy = bestTarget.y - this.y;
                             let dist = Math.hypot(dx, dy);
                             
                             if (dist > 0) {
                                 const desiredX = dx / dist;
                                 const desiredY = dy / dist;
-                                // Move faster if target is badly injured
-                                const targetHealthPercent = target.health / target.maxHealth;
-                                const urgency = 1.5 - targetHealthPercent; // More urgency for low health
-                                const moveSpeed = Math.min(this.maxSpeed * urgency, dist - this.healRange + 10);
+                                
+                                // Calculate urgency based on target's health
+                                const targetHealthPercent = bestTarget.health / bestTarget.maxHealth;
+                                const urgency = 1.8 - targetHealthPercent; // More urgency for low health
+                                
+                                // Move speed based on urgency and distance
+                                let moveSpeed = Math.min(this.maxSpeed * urgency, dist - this.healRange + 15);
+                                
+                                // Don't move too fast if we're close
+                                if (dist < this.healRange + 20) {
+                                    moveSpeed *= 0.6;
+                                }
                                 
                                 this.velX += (desiredX * moveSpeed - this.velX) * this.turnSpeed;
                                 this.velY += (desiredY * moveSpeed - this.velY) * this.turnSpeed;
@@ -1130,17 +1265,22 @@
                                 this.y += this.velY;
                             }
                             
-                            this.currentHealTarget = target.id;
+                            this.currentHealTarget = bestTarget.id;
                         }
-                        return;
                     } 
                     else {
-                        // No one needs immediate healing - stay close to allies for protection
-                        if (allies.length > 1) {
+                        // No one needs immediate healing - follow protection target or stay with group
+                        let followTarget = null;
+                        
+                        if (this.protectionTarget) {
+                            followTarget = allies.find(a => a.id === this.protectionTarget);
+                        }
+                        
+                        if (!followTarget && allies.length > 1) {
                             // Find the average position of allies
                             let avgX = 0, avgY = 0, count = 0;
                             for (let ally of allies) {
-                                if (ally !== this && this.distanceTo(ally) < HEALER_MAX_DISTANCE) {
+                                if (ally !== this) {
                                     avgX += ally.x;
                                     avgY += ally.y;
                                     count++;
@@ -1150,22 +1290,40 @@
                             if (count > 0) {
                                 avgX /= count;
                                 avgY /= count;
-                                
-                                // Move toward the average position of allies
-                                let dx = avgX - this.x, dy = avgY - this.y;
-                                let dist = Math.hypot(dx, dy);
-                                
-                                if (dist > this.healRange * 0.8) {
-                                    const desiredX = dx / dist;
-                                    const desiredY = dy / dist;
-                                    
-                                    this.velX += (desiredX * this.maxSpeed * 0.5 - this.velX) * this.turnSpeed;
-                                    this.velY += (desiredY * this.maxSpeed * 0.5 - this.velY) * this.turnSpeed;
-                                    this.x += this.velX;
-                                    this.y += this.velY;
-                                }
+                                followTarget = { x: avgX, y: avgY, radius: 0 };
                             }
                         }
+                        
+                        if (followTarget) {
+                            let targetX = followTarget.x;
+                            let targetY = followTarget.y;
+                            let dx = targetX - this.x;
+                            let dy = targetY - this.y;
+                            let dist = Math.hypot(dx, dy);
+                            
+                            // Stay at optimal healing distance from protection target
+                            const optimalDistance = this.healRange * 0.7;
+                            
+                            if (dist > optimalDistance + 10) {
+                                const desiredX = dx / dist;
+                                const desiredY = dy / dist;
+                                
+                                this.velX += (desiredX * this.maxSpeed * 0.4 - this.velX) * this.turnSpeed;
+                                this.velY += (desiredY * this.maxSpeed * 0.4 - this.velY) * this.turnSpeed;
+                                this.x += this.velX;
+                                this.y += this.velY;
+                            } else if (dist < optimalDistance - 10) {
+                                // Move away a bit if too close
+                                const desiredX = -dx / dist;
+                                const desiredY = -dy / dist;
+                                
+                                this.velX += (desiredX * this.maxSpeed * 0.3 - this.velX) * this.turnSpeed;
+                                this.velY += (desiredY * this.maxSpeed * 0.3 - this.velY) * this.turnSpeed;
+                                this.x += this.velX;
+                                this.y += this.velY;
+                            }
+                        }
+                        
                         this.currentHealTarget = null;
                     }
                     return;
@@ -1205,6 +1363,9 @@
                         
                         target.health -= actualDamage;
                         this.lastAttack = now;
+                        
+                        // Track damage for healing priority
+                        trackDamage(target.id);
                         
                         damageTexts.push(new DamageText(
                             target.x,
@@ -1320,7 +1481,7 @@
         
         document.getElementById("placeHealer").onclick = () => {
             placingMode = "healer";
-            showNotification("Placing: Active Healer (Moves to heal teammates!)", 'info');
+            showNotification("Placing: Smart Healer (Follows teammates in combat!)", 'info');
             showGhost = true;
         };
         
@@ -1350,32 +1511,36 @@
             const padding = mapPadding + 30;
             
             // Place red units on the LEFT
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 5; i++) {
                 const x = padding + Math.random() * (canvas.width/2 - padding*1.5);
                 const y = padding + Math.random() * (canvas.height - padding*2);
                 circles.push(new Circle(x, y, 'red', 'soldier'));
             }
             
             // Place blue units on the RIGHT
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 5; i++) {
                 const x = canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*1.5);
                 const y = padding + Math.random() * (canvas.height - padding*2);
                 circles.push(new Circle(x, y, 'blue', 'soldier'));
             }
             
-            // Add special units
+            // Add tanks
             circles.push(new Circle(padding + 20, canvas.height/2, 'red', 'tank'));
             circles.push(new Circle(canvas.width - padding - 20, canvas.height/2, 'blue', 'tank'));
             
-            // Add healers
+            // Add multiple healers to each team
             circles.push(new Circle(padding + 40, canvas.height/3, 'red', 'healer'));
-            circles.push(new Circle(canvas.width - padding - 40, canvas.height*2/3, 'blue', 'healer'));
+            circles.push(new Circle(padding + 60, canvas.height*2/3, 'red', 'healer'));
+            circles.push(new Circle(canvas.width - padding - 40, canvas.height/3, 'blue', 'healer'));
+            circles.push(new Circle(canvas.width - padding - 60, canvas.height*2/3, 'blue', 'healer'));
             
             // Damage some units to test healing
             circles[0].health = 60; // Damage first red soldier
-            circles[5].health = 50; // Damage first blue soldier
+            circles[1].health = 70; // Damage second red soldier
+            circles[6].health = 50; // Damage first blue soldier
+            circles[7].health = 80; // Damage second blue soldier
             
-            showNotification('Auto-placed units! Some units are damaged to test healers!', 'info');
+            showNotification('Auto-placed units with multiple healers per team!', 'info');
         };
 
         function gameLoop() {
@@ -1441,6 +1606,7 @@
             attackEffects = [];
             healingEffects = [];
             damageTexts = [];
+            damageHistory.clear();
             gameRunning = false;
             showGhost = true;
             battleStartTime = 0;
@@ -1455,7 +1621,7 @@
         }
 
         // Initialize the game
-        showNotification('Welcome to Neon Battle Simulator with Active Healers!', 'info');
+        showNotification('Welcome to Neon Battle Simulator with Smart Healers!', 'info');
         resizeCanvas();
         gameLoop();
     </script>
