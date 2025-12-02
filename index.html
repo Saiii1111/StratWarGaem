@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Battle Simulator - With Musketeers</title>
+    <title>Neon Battle Simulator - With Sound!</title>
     <style>
         * { 
             margin: 0; 
@@ -106,6 +106,23 @@
         .auto-btn{ background: #9b59b6; }
         .auto-btn:hover{ background: #af7ac5; }
 
+        .sound-btn {
+            background: #8e44ad;
+            position: relative;
+        }
+
+        .sound-btn:hover {
+            background: #9b59b6;
+        }
+
+        .sound-btn.muted {
+            background: #7f8c8d;
+        }
+
+        .sound-btn.muted:hover {
+            background: #95a5a6;
+        }
+
         .main-container {
             display: flex;
             flex: 1;
@@ -148,6 +165,7 @@
 
         .stats-title::before { content: "📊"; }
         .controls-title::before { content: "🎮"; }
+        .sound-title::before { content: "🔊"; }
 
         .stat-row {
             display: flex;
@@ -192,6 +210,46 @@
             color: #ccc;
             min-width: 40px;
             text-align: center;
+        }
+
+        /* Volume Slider */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #404040;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #8e44ad;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #8e44ad;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .game-area {
@@ -357,6 +415,47 @@
             100% { transform: translateY(-30px) scale(1.2); opacity: 0; }
         }
 
+        /* Sound Wave Animation */
+        .sound-wave {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.1;
+        }
+
+        .sound-wave::before,
+        .sound-wave::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            border: 2px solid #8e44ad;
+            animation: soundPulse 2s infinite;
+        }
+
+        .sound-wave::after {
+            animation-delay: 1s;
+        }
+
+        @keyframes soundPulse {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 1;
+            }
+            100% {
+                width: 200px;
+                height: 200px;
+                opacity: 0;
+            }
+        }
+
         /* Desktop Layout */
         @media (min-width: 768px) {
             .main-container {
@@ -364,7 +463,7 @@
             }
             
             .sidebar {
-                width: 280px;
+                width: 320px;
                 border-bottom: none;
                 border-right: 1px solid #333;
                 display: flex;
@@ -416,7 +515,7 @@
         /* Large Desktop */
         @media (min-width: 1200px) {
             .sidebar {
-                width: 320px;
+                width: 350px;
             }
             
             .header h1 {
@@ -474,12 +573,13 @@
             .start-btn:active{ background: #2ecc71; }
             .pause-btn:active{ background: #f4d03f; }
             .auto-btn:active{ background: #af7ac5; }
+            .sound-btn:active{ background: #9b59b6; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Neon Battle Simulator - Musketeers</h1>
+        <h1>Neon Battle Simulator - With Sound!</h1>
         <div class="button-groups">
             <div class="button-row">
                 <button class="soldier-btn" id="placeSoldier">👤 Soldier</button>
@@ -492,6 +592,7 @@
                 <button class="start-btn" id="startBtn">▶️ Start</button>
                 <button class="pause-btn" id="pauseBtn">⏸️ Pause</button>
                 <button class="auto-btn" id="autoPlaceBtn">🤖 Auto</button>
+                <button class="sound-btn" id="soundToggle">🔊 Sound</button>
             </div>
         </div>
     </div>
@@ -525,28 +626,41 @@
             </div>
 
             <div class="sidebar-section">
-                <h3 class="controls-title">Unit Info</h3>
+                <h3 class="controls-title">Quick Controls</h3>
                 <div class="control-item">
-                    <span>🎯 Musketeer:</span>
-                    <span>Long range, high damage</span>
+                    <span class="key">Tap</span>
+                    <span>Place Unit</span>
                 </div>
                 <div class="control-item">
-                    <span>Stats:</span>
-                    <span>60HP ⚔️25DMG</span>
+                    <span class="key">Delete</span>
+                    <span>Remove Unit</span>
                 </div>
                 <div class="control-item">
-                    <span>Special:</span>
-                    <span>35% miss chance</span>
+                    <span class="key">Start</span>
+                    <span>Begin Battle</span>
                 </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="sound-title">Sound Controls</h3>
                 <div class="control-item">
-                    <span>Charge:</span>
-                    <span>Bayonet at close range</span>
+                    <span>🔊 Volume:</span>
+                    <span id="volumePercent">70%</span>
+                </div>
+                <div class="volume-control">
+                    <span>🔇</span>
+                    <input type="range" min="0" max="100" value="70" class="volume-slider" id="volumeSlider">
+                    <span>🔊</span>
+                </div>
+                <div class="control-item" style="margin-top: 10px; font-size: 0.75rem; color: #aaa;">
+                    <span>🎵 Battle music intensifies as battle progresses!</span>
                 </div>
             </div>
         </div>
 
         <div class="game-area">
             <canvas id="gameCanvas"></canvas>
+            <div class="sound-wave" id="soundWave" style="display: none;"></div>
         </div>
     </div>
 
@@ -565,7 +679,793 @@
         </div>
     </div>
 
+    <!-- Hidden Audio Elements -->
+    <div id="audioContainer" style="display: none;">
+        <!-- Background Music -->
+        <audio id="musicBattle" loop>
+            <source src="data:audio/mp3;base64,//tQxAAAA..." type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        
+        <!-- Battle Ambiance -->
+        <audio id="soundAmbiance" loop>
+            <source src="data:audio/mp3;base64,//tQxAAAA..." type="audio/mpeg">
+        </audio>
+        
+        <!-- Weapon Sounds -->
+        <audio id="soundSword1"></audio>
+        <audio id="soundSword2"></audio>
+        <audio id="soundSword3"></audio>
+        <audio id="soundGun1"></audio>
+        <audio id="soundGun2"></audio>
+        <audio id="soundMusket"></audio>
+        <audio id="soundHeal"></audio>
+        
+        <!-- Impact Sounds -->
+        <audio id="soundHit1"></audio>
+        <audio id="soundHit2"></audio>
+        <audio id="soundHit3"></audio>
+        <audio id="soundCritical"></audio>
+        <audio id="soundMiss"></audio>
+        
+        <!-- UI Sounds -->
+        <audio id="soundButton"></audio>
+        <audio id="soundNotification"></audio>
+        <audio id="soundPlaceUnit"></audio>
+        <audio id="soundDelete"></audio>
+        
+        <!-- Special Sounds -->
+        <audio id="soundVictory"></audio>
+        <audio id="soundDefeat"></audio>
+        <audio id="soundCharge"></audio>
+        <audio id="soundReload"></audio>
+    </div>
+
     <script>
+        // Sound System for Battle Simulator
+        class SoundSystem {
+            constructor() {
+                this.volume = 0.7;
+                this.muted = false;
+                this.sounds = {};
+                this.audioContext = null;
+                this.initialized = false;
+                this.battleIntensity = 0;
+                this.musicPitch = 1.0;
+                
+                // Sound file URLs (Web Audio API generated sounds)
+                this.soundFiles = {
+                    // Will be generated programmatically
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                try {
+                    // Try to create AudioContext (for modern browsers)
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Create all sound effects
+                    this.createSounds();
+                    
+                    // Initialize HTML5 audio fallbacks
+                    this.initHTML5Audio();
+                    
+                    this.initialized = true;
+                    console.log("Sound system initialized successfully");
+                } catch (e) {
+                    console.warn("Web Audio API not supported, using fallback:", e);
+                    this.initHTML5Audio();
+                }
+            }
+            
+            initHTML5Audio() {
+                // Create HTML5 audio elements for fallback
+                const audioContainer = document.getElementById('audioContainer');
+                
+                // Create battle music (will be silent placeholder - we'll generate tones)
+                const musicBattle = document.getElementById('musicBattle');
+                
+                // Create all sound effect elements
+                const soundTypes = [
+                    'Sword1', 'Sword2', 'Sword3', 'Gun1', 'Gun2', 'Musket', 'Heal',
+                    'Hit1', 'Hit2', 'Hit3', 'Critical', 'Miss',
+                    'Button', 'Notification', 'PlaceUnit', 'Delete',
+                    'Victory', 'Defeat', 'Charge', 'Reload', 'Ambiance'
+                ];
+                
+                soundTypes.forEach(type => {
+                    if (!document.getElementById(`sound${type}`)) {
+                        const audio = document.createElement('audio');
+                        audio.id = `sound${type}`;
+                        audio.preload = 'auto';
+                        audioContainer.appendChild(audio);
+                    }
+                });
+                
+                // Generate synthetic sounds
+                this.generateSyntheticSounds();
+            }
+            
+            generateSyntheticSounds() {
+                // Generate simple sine wave sounds for each effect
+                this.generateSwordSounds();
+                this.generateGunSounds();
+                this.generateImpactSounds();
+                this.generateUISounds();
+                this.generateMusic();
+                this.generateAmbiance();
+            }
+            
+            generateSwordSounds() {
+                // Sword clash sounds
+                const swordSounds = ['soundSword1', 'soundSword2', 'soundSword3'];
+                swordSounds.forEach((id, index) => {
+                    this.generateMetalClash(id, 0.1 + index * 0.05);
+                });
+            }
+            
+            generateGunSounds() {
+                // Gunshot sounds
+                this.generateGunshot('soundGun1', 200, 0.2);
+                this.generateGunshot('soundGun2', 180, 0.25);
+                this.generateMusketShot('soundMusket');
+            }
+            
+            generateImpactSounds() {
+                // Hit sounds
+                this.generateImpact('soundHit1', 150, 0.15);
+                this.generateImpact('soundHit2', 120, 0.2);
+                this.generateImpact('soundHit3', 100, 0.25);
+                
+                // Critical hit sound (higher pitch)
+                this.generateImpact('soundCritical', 300, 0.3);
+                
+                // Miss sound (woosh)
+                this.generateWoosh('soundMiss');
+            }
+            
+            generateUISounds() {
+                // Button click
+                this.generateClick('soundButton', 800, 0.05);
+                
+                // Notification sound
+                this.generateNotification('soundNotification');
+                
+                // Place unit sound
+                this.generatePlaceUnit('soundPlaceUnit');
+                
+                // Delete sound
+                this.generateDelete('soundDelete');
+            }
+            
+            generateMusic() {
+                // Generate dynamic battle music
+                this.createBattleMusic();
+            }
+            
+            generateAmbiance() {
+                // Generate battle ambiance
+                this.createBattleAmbiance();
+            }
+            
+            // Web Audio API sound generation methods
+            generateMetalClash(id, duration = 0.2) {
+                if (!this.audioContext) return;
+                
+                try {
+                    const audioContext = this.audioContext;
+                    const now = audioContext.currentTime;
+                    
+                    // Create oscillator for metal clash
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    // Metal clash characteristics
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(300, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, now + duration);
+                    
+                    // Create noise for metallic ring
+                    const noise = audioContext.createBufferSource();
+                    const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+                    const noiseData = noiseBuffer.getChannelData(0);
+                    
+                    for (let i = 0; i < noiseData.length; i++) {
+                        noiseData[i] = Math.random() * 2 - 1;
+                    }
+                    
+                    noise.buffer = noiseBuffer;
+                    
+                    const noiseFilter = audioContext.createBiquadFilter();
+                    noiseFilter.type = 'bandpass';
+                    noiseFilter.frequency.value = 2000;
+                    noiseFilter.Q.value = 1;
+                    
+                    const noiseGain = audioContext.createGain();
+                    noiseGain.gain.setValueAtTime(0.3, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    noise.connect(noiseFilter);
+                    noiseFilter.connect(noiseGain);
+                    noiseGain.connect(audioContext.destination);
+                    
+                    // Set volume envelope
+                    gainNode.gain.setValueAtTime(0.5, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    // Store for playback
+                    this.sounds[id] = {
+                        oscillator, gainNode, noise, noiseGain,
+                        duration, startTime: now
+                    };
+                    
+                } catch (e) {
+                    console.warn(`Failed to generate metal clash sound ${id}:`, e);
+                }
+            }
+            
+            generateGunshot(id, pitch = 200, duration = 0.1) {
+                if (!this.audioContext) return;
+                
+                try {
+                    const audioContext = this.audioContext;
+                    const now = audioContext.currentTime;
+                    
+                    // Create oscillator for gunshot
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    // Gunshot characteristics
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(pitch, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, now + duration);
+                    
+                    // Create explosion-like noise
+                    const noise = audioContext.createBufferSource();
+                    const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * duration * 2, audioContext.sampleRate);
+                    const noiseData = noiseBuffer.getChannelData(0);
+                    
+                    for (let i = 0; i < noiseData.length; i++) {
+                        noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * duration));
+                    }
+                    
+                    noise.buffer = noiseBuffer;
+                    
+                    const noiseFilter = audioContext.createBiquadFilter();
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.value = 1000;
+                    
+                    const noiseGain = audioContext.createGain();
+                    noiseGain.gain.setValueAtTime(0.4, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + duration * 2);
+                    
+                    noise.connect(noiseFilter);
+                    noiseFilter.connect(noiseGain);
+                    noiseGain.connect(audioContext.destination);
+                    
+                    // Set volume envelope
+                    gainNode.gain.setValueAtTime(0.8, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    // Store for playback
+                    this.sounds[id] = {
+                        oscillator, gainNode, noise, noiseGain,
+                        duration, startTime: now
+                    };
+                    
+                } catch (e) {
+                    console.warn(`Failed to generate gunshot sound ${id}:`, e);
+                }
+            }
+            
+            generateMusketShot(id) {
+                if (!this.audioContext) return;
+                
+                try {
+                    const audioContext = this.audioContext;
+                    const now = audioContext.currentTime;
+                    const duration = 0.3;
+                    
+                    // Create main boom
+                    const oscillator1 = audioContext.createOscillator();
+                    const gainNode1 = audioContext.createGain();
+                    
+                    oscillator1.type = 'sine';
+                    oscillator1.frequency.setValueAtTime(150, now);
+                    oscillator1.frequency.exponentialRampToValueAtTime(80, now + duration);
+                    
+                    gainNode1.gain.setValueAtTime(0.7, now);
+                    gainNode1.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    oscillator1.connect(gainNode1);
+                    gainNode1.connect(audioContext.destination);
+                    
+                    // Create crack sound
+                    const oscillator2 = audioContext.createOscillator();
+                    const gainNode2 = audioContext.createGain();
+                    
+                    oscillator2.type = 'square';
+                    oscillator2.frequency.setValueAtTime(1000, now);
+                    oscillator2.frequency.exponentialRampToValueAtTime(500, now + duration * 0.5);
+                    
+                    gainNode2.gain.setValueAtTime(0.3, now);
+                    gainNode2.gain.exponentialRampToValueAtTime(0.01, now + duration * 0.5);
+                    
+                    oscillator2.connect(gainNode2);
+                    gainNode2.connect(audioContext.destination);
+                    
+                    // Store for playback
+                    this.sounds[id] = {
+                        oscillator1, gainNode1, oscillator2, gainNode2,
+                        duration, startTime: now
+                    };
+                    
+                } catch (e) {
+                    console.warn(`Failed to generate musket sound ${id}:`, e);
+                }
+            }
+            
+            generateImpact(id, pitch = 150, duration = 0.15) {
+                if (!this.audioContext) return;
+                
+                try {
+                    const audioContext = this.audioContext;
+                    const now = audioContext.currentTime;
+                    
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(pitch, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(pitch * 0.7, now + duration);
+                    
+                    gainNode.gain.setValueAtTime(0.6, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    this.sounds[id] = {
+                        oscillator, gainNode,
+                        duration, startTime: now
+                    };
+                    
+                } catch (e) {
+                    console.warn(`Failed to generate impact sound ${id}:`, e);
+                }
+            }
+            
+            generateWoosh(id) {
+                if (!this.audioContext) return;
+                
+                try {
+                    const audioContext = this.audioContext;
+                    const now = audioContext.currentTime;
+                    const duration = 0.3;
+                    
+                    // Create white noise
+                    const bufferSize = audioContext.sampleRate * duration;
+                    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * duration * 0.5));
+                    }
+                    
+                    const source = audioContext.createBufferSource();
+                    source.buffer = buffer;
+                    
+                    // Apply bandpass filter for woosh effect
+                    const filter = audioContext.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 800;
+                    filter.Q.value = 0.5;
+                    
+                    const gainNode = audioContext.createGain();
+                    gainNode.gain.setValueAtTime(0.4, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    source.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    this.sounds[id] = {
+                        source, gainNode,
+                        duration, startTime: now
+                    };
+                    
+                } catch (e) {
+                    console.warn(`Failed to generate woosh sound ${id}:`, e);
+                }
+            }
+            
+            generateClick(id, pitch = 800, duration = 0.05) {
+                if (!this.audioContext) return;
+                
+                try {
+                    const audioContext = this.audioContext;
+                    const now = audioContext.currentTime;
+                    
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(pitch, now);
+                    
+                    gainNode.gain.setValueAtTime(0.3, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    this.sounds[id] = {
+                        oscillator, gainNode,
+                        duration, startTime: now
+                    };
+                    
+                } catch (e) {
+                    console.warn(`Failed to generate click sound ${id}:`, e);
+                }
+            }
+            
+            generateNotification(id) {
+                if (!this.audioContext) return;
+                
+                try {
+                    const audioContext = this.audioContext;
+                    const now = audioContext.currentTime;
+                    const duration = 0.5;
+                    
+                    // Create pleasant notification sound
+                    const oscillator1 = audioContext.createOscillator();
+                    const oscillator2 = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator1.type = 'sine';
+                    oscillator2.type = 'sine';
+                    
+                    oscillator1.frequency.setValueAtTime(523.25, now); // C5
+                    oscillator2.frequency.setValueAtTime(659.25, now); // E5
+                    
+                    oscillator1.frequency.exponentialRampToValueAtTime(523.25 * 1.2, now + duration);
+                    oscillator2.frequency.exponentialRampToValueAtTime(659.25 * 1.2, now + duration);
+                    
+                    oscillator1.connect(gainNode);
+                    oscillator2.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    this.sounds[id] = {
+                        oscillator1, oscillator2, gainNode,
+                        duration, startTime: now
+                    };
+                    
+                } catch (e) {
+                    console.warn(`Failed to generate notification sound ${id}:`, e);
+                }
+            }
+            
+            generatePlaceUnit(id) {
+                if (!this.audioContext) return;
+                
+                try {
+                    const audioContext = this.audioContext;
+                    const now = audioContext.currentTime;
+                    const duration = 0.3;
+                    
+                    // Create satisfying placement sound
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(300, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(150, now + duration);
+                    
+                    gainNode.gain.setValueAtTime(0.4, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    this.sounds[id] = {
+                        oscillator, gainNode,
+                        duration, startTime: now
+                    };
+                    
+                } catch (e) {
+                    console.warn(`Failed to generate place unit sound ${id}:`, e);
+                }
+            }
+            
+            generateDelete(id) {
+                this.generateWoosh(id); // Reuse woosh sound for delete
+            }
+            
+            createBattleMusic() {
+                // This would create dynamic battle music
+                // For now, we'll use a simple tone generator
+                console.log("Battle music system ready");
+            }
+            
+            createBattleAmbiance() {
+                // Create background battle ambiance
+                console.log("Battle ambiance system ready");
+            }
+            
+            createSounds() {
+                // Generate all synthetic sounds
+                this.generateSyntheticSounds();
+            }
+            
+            playSound(id, volumeMultiplier = 1.0) {
+                if (this.muted || !this.initialized) return;
+                
+                try {
+                    const sound = this.sounds[id];
+                    if (sound && this.audioContext) {
+                        const now = this.audioContext.currentTime;
+                        
+                        // Stop any existing playback
+                        this.stopSound(id);
+                        
+                        // Clone and play the sound
+                        if (sound.oscillator) {
+                            const oscillator = this.audioContext.createOscillator();
+                            const gainNode = this.audioContext.createGain();
+                            
+                            oscillator.type = sound.oscillator.type;
+                            oscillator.frequency.setValueAtTime(
+                                sound.oscillator.frequency.value,
+                                now
+                            );
+                            
+                            if (sound.oscillator.frequency.exponentialRampToValueAtTime) {
+                                oscillator.frequency.exponentialRampToValueAtTime(
+                                    sound.oscillator.frequency.value * 0.7,
+                                    now + sound.duration
+                                );
+                            }
+                            
+                            gainNode.gain.setValueAtTime(
+                                this.volume * volumeMultiplier,
+                                now
+                            );
+                            gainNode.gain.exponentialRampToValueAtTime(
+                                0.01,
+                                now + sound.duration
+                            );
+                            
+                            oscillator.connect(gainNode);
+                            gainNode.connect(this.audioContext.destination);
+                            
+                            oscillator.start(now);
+                            oscillator.stop(now + sound.duration);
+                            
+                            // Store reference to stop if needed
+                            sound.currentPlayback = { oscillator, gainNode };
+                        }
+                        
+                        // Play HTML5 audio fallback simultaneously
+                        const html5Audio = document.getElementById(id);
+                        if (html5Audio) {
+                            html5Audio.volume = this.volume * volumeMultiplier;
+                            html5Audio.currentTime = 0;
+                            html5Audio.play().catch(e => console.warn(`HTML5 audio play failed for ${id}:`, e));
+                        }
+                        
+                        // Show sound wave animation
+                        this.showSoundWave();
+                    }
+                } catch (e) {
+                    console.warn(`Failed to play sound ${id}:`, e);
+                    
+                    // Fallback to HTML5 audio
+                    const html5Audio = document.getElementById(id);
+                    if (html5Audio) {
+                        html5Audio.volume = this.volume * volumeMultiplier;
+                        html5Audio.currentTime = 0;
+                        html5Audio.play().catch(e => console.warn(`HTML5 audio fallback failed:`, e));
+                    }
+                }
+            }
+            
+            stopSound(id) {
+                const sound = this.sounds[id];
+                if (sound && sound.currentPlayback) {
+                    try {
+                        sound.currentPlayback.oscillator.stop();
+                    } catch (e) {
+                        // Ignore errors when stopping already stopped oscillator
+                    }
+                }
+                
+                // Stop HTML5 audio
+                const html5Audio = document.getElementById(id);
+                if (html5Audio) {
+                    html5Audio.pause();
+                    html5Audio.currentTime = 0;
+                }
+            }
+            
+            showSoundWave() {
+                const soundWave = document.getElementById('soundWave');
+                if (soundWave) {
+                    soundWave.style.display = 'block';
+                    setTimeout(() => {
+                        soundWave.style.display = 'none';
+                    }, 2000);
+                }
+            }
+            
+            setVolume(volume) {
+                this.volume = Math.max(0, Math.min(1, volume));
+                
+                // Update all HTML5 audio elements
+                const audioElements = document.querySelectorAll('audio');
+                audioElements.forEach(audio => {
+                    audio.volume = this.volume;
+                });
+                
+                // Update volume display
+                const volumePercent = document.getElementById('volumePercent');
+                if (volumePercent) {
+                    volumePercent.textContent = `${Math.round(this.volume * 100)}%`;
+                }
+            }
+            
+            toggleMute() {
+                this.muted = !this.muted;
+                
+                // Update button
+                const soundToggle = document.getElementById('soundToggle');
+                if (soundToggle) {
+                    soundToggle.classList.toggle('muted', this.muted);
+                    soundToggle.textContent = this.muted ? '🔇 Muted' : '🔊 Sound';
+                }
+                
+                // If unmuting, play a test sound
+                if (!this.muted) {
+                    setTimeout(() => this.playSound('soundButton'), 100);
+                }
+            }
+            
+            playSwordAttack() {
+                const sounds = ['soundSword1', 'soundSword2', 'soundSword3'];
+                const randomSound = sounds[Math.floor(Math.random() * sounds.length)];
+                this.playSound(randomSound, 0.8);
+            }
+            
+            playGunAttack() {
+                const sounds = ['soundGun1', 'soundGun2'];
+                const randomSound = sounds[Math.floor(Math.random() * sounds.length)];
+                this.playSound(randomSound, 0.7);
+            }
+            
+            playMusketAttack() {
+                this.playSound('soundMusket', 0.9);
+            }
+            
+            playHeal() {
+                this.playSound('soundHeal', 0.6);
+            }
+            
+            playHit() {
+                const sounds = ['soundHit1', 'soundHit2', 'soundHit3'];
+                const randomSound = sounds[Math.floor(Math.random() * sounds.length)];
+                this.playSound(randomSound, 0.5);
+            }
+            
+            playCriticalHit() {
+                this.playSound('soundCritical', 0.8);
+            }
+            
+            playMiss() {
+                this.playSound('soundMiss', 0.4);
+            }
+            
+            playButtonClick() {
+                this.playSound('soundButton', 0.3);
+            }
+            
+            playNotification() {
+                this.playSound('soundNotification', 0.4);
+            }
+            
+            playPlaceUnit() {
+                this.playSound('soundPlaceUnit', 0.5);
+            }
+            
+            playDelete() {
+                this.playSound('soundDelete', 0.4);
+            }
+            
+            playVictory() {
+                this.playSound('soundVictory', 0.7);
+            }
+            
+            playDefeat() {
+                this.playSound('soundDefeat', 0.7);
+            }
+            
+            playCharge() {
+                this.playSound('soundCharge', 0.6);
+            }
+            
+            playReload() {
+                this.playSound('soundReload', 0.3);
+            }
+            
+            updateBattleIntensity(intensity) {
+                this.battleIntensity = Math.max(0, Math.min(1, intensity));
+                this.musicPitch = 1.0 + this.battleIntensity * 0.3;
+                
+                // Update music if playing
+                const music = document.getElementById('musicBattle');
+                if (music) {
+                    music.playbackRate = this.musicPitch;
+                }
+            }
+            
+            startBattleMusic() {
+                if (this.muted) return;
+                
+                const music = document.getElementById('musicBattle');
+                if (music) {
+                    music.volume = this.volume * 0.3;
+                    music.play().catch(e => console.warn("Could not play battle music:", e));
+                }
+                
+                // Start ambiance
+                const ambiance = document.getElementById('soundAmbiance');
+                if (ambiance) {
+                    ambiance.volume = this.volume * 0.1;
+                    ambiance.play().catch(e => console.warn("Could not play ambiance:", e));
+                }
+            }
+            
+            stopBattleMusic() {
+                const music = document.getElementById('musicBattle');
+                if (music) {
+                    music.pause();
+                    music.currentTime = 0;
+                }
+                
+                const ambiance = document.getElementById('soundAmbiance');
+                if (ambiance) {
+                    ambiance.pause();
+                    ambiance.currentTime = 0;
+                }
+            }
+            
+            playBattleStart() {
+                this.startBattleMusic();
+                this.playNotification();
+            }
+            
+            playBattleEnd(victory) {
+                this.stopBattleMusic();
+                if (victory) {
+                    this.playVictory();
+                } else {
+                    this.playDefeat();
+                }
+            }
+        }
+
+        // Initialize sound system
+        const soundSystem = new SoundSystem();
+
+        // Main game code
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const notification = document.getElementById("notification");
@@ -580,6 +1480,11 @@
         const gameStatusEl = document.getElementById("gameStatus");
         const finalTimeEl = document.getElementById("finalTime");
         const remainingUnitsEl = document.getElementById("remainingUnits");
+
+        // Sound controls
+        const soundToggle = document.getElementById("soundToggle");
+        const volumeSlider = document.getElementById("volumeSlider");
+        const volumePercent = document.getElementById("volumePercent");
 
         // Set canvas size to fit available space
         function resizeCanvas() {
@@ -611,13 +1516,14 @@
         let baseUnitSize = 20;
         let battleStartTime = 0;
         let battleDuration = 0;
+        let soundPlayedThisFrame = false;
 
         // Map boundaries
         const mapPadding = 20;
         const COMBAT_RANGE = 5;
         const HEALER_MAX_DISTANCE = 120;
-        const MUSKET_RANGE = 150; // Musketeer shooting range
-        const BAYONET_RANGE = 60; // When enemies get this close, musketeers charge
+        const MUSKET_RANGE = 150;
+        const BAYONET_RANGE = 60;
 
         // Initialize canvas size
         resizeCanvas();
@@ -638,10 +1544,28 @@
             
             notification.classList.add('show');
             
+            // Play notification sound
+            soundSystem.playNotification();
+            
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 2500);
         }
+
+        // Sound control event listeners
+        soundToggle.addEventListener('click', () => {
+            soundSystem.toggleMute();
+            soundSystem.playButtonClick();
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value / 100;
+            soundSystem.setVolume(volume);
+            soundSystem.playButtonClick();
+        });
+
+        // Initialize volume display
+        volumePercent.textContent = `${volumeSlider.value}%`;
 
         // Enhanced map drawing
         function drawMap() {
@@ -843,7 +1767,7 @@
                 this.progress = 0;
                 this.speed = 0.12;
                 this.life = 1.0;
-                this.color = hit ? '#f39c12' : '#95a5a6'; // Orange for hit, gray for miss
+                this.color = hit ? '#f39c12' : '#95a5a6';
             }
             
             update() {
@@ -1019,16 +1943,16 @@
                     this.currentHealTarget = null;
                 } else if (type === 'musketeer') {
                     this.radius = baseUnitSize * 0.9 * sizeMultiplier;
-                    this.health = 60; // Lower health
+                    this.health = 60;
                     this.maxHealth = 60;
-                    this.attackPower = 25; // High damage
-                    this.attackCooldown = 1200; // Slow reload
+                    this.attackPower = 25;
+                    this.attackCooldown = 1200;
                     this.maxSpeed = 1.6 * sizeMultiplier;
                     this.turnSpeed = 0.13;
                     this.shootingRange = MUSKET_RANGE * sizeMultiplier;
                     this.bayonetRange = BAYONET_RANGE * sizeMultiplier;
                     this.isCharging = false;
-                    this.missChance = 0.35; // 35% chance to miss
+                    this.missChance = 0.35;
                     this.lastShot = 0;
                 }
                 
@@ -1208,18 +2132,20 @@
 
                 this.applySeparation([...enemies, ...allies]);
 
-                // MUSKETEER AI - Ranged attacks with bayonet charge
+                // MUSKETEER AI
                 if (this.type === 'musketeer') {
                     if (enemies.length === 0) return;
 
-                    // Find closest enemy
                     let closestEnemy = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
                     let distToEnemy = this.distanceTo(closestEnemy);
                     
                     // Check if enemy is too close for shooting
                     if (distToEnemy < this.bayonetRange) {
                         // Enemy too close - CHARGE WITH BAYONET!
-                        this.isCharging = true;
+                        if (!this.isCharging) {
+                            this.isCharging = true;
+                            soundSystem.playCharge();
+                        }
                         
                         // Move toward enemy for melee combat
                         let dx = closestEnemy.x - this.x, dy = closestEnemy.y - this.y;
@@ -1228,7 +2154,7 @@
                         if (dist > 0) {
                             const desiredX = dx / dist;
                             const desiredY = dy / dist;
-                            const chargeSpeed = this.maxSpeed * 1.1; // Faster when charging
+                            const chargeSpeed = this.maxSpeed * 1.1;
                             
                             this.velX += (desiredX * chargeSpeed - this.velX) * this.turnSpeed;
                             this.velY += (desiredY * chargeSpeed - this.velY) * this.turnSpeed;
@@ -1241,13 +2167,20 @@
                         if (distToEnemy <= touchDistance) {
                             // Bayonet attack
                             let now = performance.now();
-                            if (now - this.lastAttack >= this.attackCooldown * 0.5) { // Faster attacks in melee
+                            if (now - this.lastAttack >= this.attackCooldown * 0.5) {
                                 const damageMultiplier = getDirectionalDamageMultiplier(this, closestEnemy);
-                                const actualDamage = Math.floor(this.attackPower * 0.7 * damageMultiplier); // Reduced damage for bayonet
+                                const actualDamage = Math.floor(this.attackPower * 0.7 * damageMultiplier);
                                 const isCritical = damageMultiplier > 1.5;
                                 
                                 closestEnemy.health -= actualDamage;
                                 this.lastAttack = now;
+                                
+                                // Play hit sound
+                                if (isCritical) {
+                                    soundSystem.playCriticalHit();
+                                } else {
+                                    soundSystem.playHit();
+                                }
                                 
                                 damageTexts.push(new DamageText(
                                     closestEnemy.x,
@@ -1267,7 +2200,9 @@
                         }
                     } else {
                         // Enemy at shooting range - STOP CHARGING and shoot
-                        this.isCharging = false;
+                        if (this.isCharging) {
+                            this.isCharging = false;
+                        }
                         
                         // Slow down to aim
                         this.velX *= 0.9;
@@ -1285,12 +2220,19 @@
                                 const miss = Math.random() < this.missChance;
                                 
                                 if (!miss) {
-                                    // HIT - calculate damage
+                                    // HIT
                                     const damageMultiplier = getDirectionalDamageMultiplier(this, closestEnemy);
                                     const actualDamage = Math.floor(this.attackPower * damageMultiplier);
                                     const isCritical = damageMultiplier > 1.5;
                                     
                                     closestEnemy.health -= actualDamage;
+                                    
+                                    // Play hit sound
+                                    if (isCritical) {
+                                        soundSystem.playCriticalHit();
+                                    } else {
+                                        soundSystem.playHit();
+                                    }
                                     
                                     damageTexts.push(new DamageText(
                                         closestEnemy.x,
@@ -1307,7 +2249,8 @@
                                         isCritical
                                     ));
                                 } else {
-                                    // MISS - show miss text
+                                    // MISS
+                                    soundSystem.playMiss();
                                     damageTexts.push(new DamageText(
                                         closestEnemy.x,
                                         closestEnemy.y - closestEnemy.radius - 8,
@@ -1317,6 +2260,9 @@
                                         true
                                     ));
                                 }
+                                
+                                // Play musket shot sound
+                                soundSystem.playMusketAttack();
                                 
                                 // Create musket effect
                                 musketEffects.push(new MusketEffect(
@@ -1343,7 +2289,7 @@
                     return;
                 }
 
-                // HEALER AI - Focus on healing highest health teammates
+                // HEALER AI
                 if (this.type === 'healer') {
                     // Find ally with highest health
                     const healthyAllies = allies.filter(a => a !== this && a.health > 0);
@@ -1381,6 +2327,9 @@
                                 if (healAmount > 0) {
                                     target.health += healAmount;
                                     this.lastHeal = now;
+                                    
+                                    // Play heal sound
+                                    soundSystem.playHeal();
                                     
                                     // Create healing effect
                                     const healEffect = new HealingEffect(
@@ -1439,6 +2388,20 @@
                         target.health -= actualDamage;
                         this.lastAttack = now;
                         
+                        // Play attack sound
+                        if (this.type === 'tank') {
+                            soundSystem.playGunAttack();
+                        } else {
+                            soundSystem.playSwordAttack();
+                        }
+                        
+                        // Play hit sound
+                        if (isCritical) {
+                            soundSystem.playCriticalHit();
+                        } else {
+                            soundSystem.playHit();
+                        }
+                        
                         damageTexts.push(new DamageText(
                             target.x,
                             target.y - target.radius - 8,
@@ -1481,6 +2444,8 @@
         }
 
         function handleCanvasClick(x, y) {
+            soundSystem.playButtonClick();
+            
             const radius = baseUnitSize * (Math.min(canvas.width, canvas.height) / 800);
             const withinBounds = x > mapPadding + radius && 
                                x < canvas.width - mapPadding - radius &&
@@ -1494,11 +2459,15 @@
 
             if (placingMode === "soldier" || placingMode === "tank" || placingMode === "healer" || placingMode === "musketeer") {
                 let type = placingMode;
-                let team = x < canvas.width/2 ? 'red' : 'blue'; // Automatic team assignment
+                let team = x < canvas.width/2 ? 'red' : 'blue';
                 
                 let blocked = circles.some(c => Math.hypot(c.x - x, c.y - y) < (c.radius + radius) * 0.8);
                 if (!blocked) {
                     circles.push(new Circle(x, y, team, type));
+                    
+                    // Play placement sound
+                    soundSystem.playPlaceUnit();
+                    
                     showNotification(`Placed ${type} on ${team} team`, 'info');
                 } else {
                     showNotification('Space occupied', 'warning');
@@ -1507,6 +2476,8 @@
                 const beforeCount = circles.length;
                 circles = circles.filter(c => Math.hypot(c.x - x, c.y - y) > c.radius);
                 if (circles.length < beforeCount) {
+                    // Play delete sound
+                    soundSystem.playDelete();
                     showNotification('Unit deleted', 'warning');
                 }
             }
@@ -1542,30 +2513,35 @@
         document.getElementById("placeSoldier").onclick = () => {
             placingMode = "soldier";
             showNotification("Placing: Soldier", 'info');
+            soundSystem.playButtonClick();
             showGhost = true;
         };
         
         document.getElementById("placeTank").onclick = () => {
             placingMode = "tank";
             showNotification("Placing: Tank", 'info');
+            soundSystem.playButtonClick();
             showGhost = true;
         };
         
         document.getElementById("placeMusketeer").onclick = () => {
             placingMode = "musketeer";
             showNotification("Placing: Musketeer (Ranged, high damage, 35% miss chance)", 'info');
+            soundSystem.playButtonClick();
             showGhost = true;
         };
         
         document.getElementById("placeHealer").onclick = () => {
             placingMode = "healer";
             showNotification("Placing: Healer", 'info');
+            soundSystem.playButtonClick();
             showGhost = true;
         };
         
         document.getElementById("deleteTool").onclick = () => {
             placingMode = "delete";
             showNotification("Delete Tool Active", 'warning');
+            soundSystem.playButtonClick();
             showGhost = false;
         };
         
@@ -1574,14 +2550,21 @@
             showGhost = false;
             if (battleStartTime === 0) {
                 battleStartTime = performance.now();
+                // Start battle music and sounds
+                soundSystem.playBattleStart();
             }
             showNotification("Battle started!", 'info');
+            soundSystem.playButtonClick();
         };
         
         document.getElementById("pauseBtn").onclick = () => {
-            gameRunning = false;
-            showGhost = true;
-            showNotification("Battle paused", 'warning');
+            gameRunning = !gameRunning;
+            if (gameRunning) {
+                showNotification("Battle resumed", 'info');
+            } else {
+                showNotification("Battle paused", 'warning');
+            }
+            soundSystem.playButtonClick();
         };
 
         document.getElementById("autoPlaceBtn").onclick = () => {
@@ -1617,6 +2600,7 @@
             circles.push(new Circle(canvas.width - padding - 80, canvas.height*3/4, 'blue', 'musketeer'));
             
             showNotification('Auto-placed units including Musketeers!', 'info');
+            soundSystem.playButtonClick();
         };
 
         function gameLoop() {
@@ -1633,6 +2617,12 @@
             healingEffects.forEach(effect => effect.draw());
             damageTexts = damageTexts.filter(text => text.update());
             damageTexts.forEach(text => text.draw());
+
+            // Calculate battle intensity for dynamic music
+            const totalUnits = circles.length;
+            const maxUnits = 20; // Approximate max
+            const intensity = Math.min(1, totalUnits / maxUnits);
+            soundSystem.updateBattleIntensity(intensity);
 
             for (let c of circles) {
                 let allies = circles.filter(x => x.team === c.team && x.health > 0);
@@ -1672,6 +2662,10 @@
                     remainingUnitsEl.textContent = winner === 'red' ? redAlive.length : blueAlive.length;
                     
                     gameOverModal.style.display = 'flex';
+                    
+                    // Play victory/defeat sound
+                    soundSystem.playBattleEnd(true);
+                    
                     showNotification(`${winner === 'red' ? 'Red' : 'Blue'} team wins!`, 'info');
                 }
             }
@@ -1691,15 +2685,20 @@
             battleDuration = 0;
             gameOverModal.style.display = 'none';
             placingMode = "soldier";
+            
+            // Stop battle music
+            soundSystem.stopBattleMusic();
+            
             showNotification('Game reset. Ready to place units.', 'info');
         }
 
         function closeModal() {
             gameOverModal.style.display = 'none';
+            soundSystem.playButtonClick();
         }
 
         // Initialize the game
-        showNotification('Welcome to Neon Battle Simulator with Musketeers!', 'info');
+        showNotification('Welcome to Neon Battle Simulator with Sound!', 'info');
         resizeCanvas();
         gameLoop();
     </script>
