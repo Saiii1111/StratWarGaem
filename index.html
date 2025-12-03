@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Battle Simulator - With Musketeers</title>
+    <title>Neon Battle Simulator - Terrain System</title>
     <style>
         * { 
             margin: 0; 
@@ -46,7 +46,7 @@
         }
 
         .header h1::before {
-            content: "⚔️";
+            content: "🗺️";
             font-size: 1.4rem;
         }
 
@@ -107,6 +107,8 @@
         .auto-btn:hover{ background: #af7ac5; }
         .play-again-header-btn{ background: #1abc9c; }
         .play-again-header-btn:hover{ background: #48c9b0; }
+        .map-btn{ background: #8e44ad; }
+        .map-btn:hover{ background: #9b59b6; }
 
         .main-container {
             display: flex;
@@ -116,7 +118,7 @@
             flex-direction: column;
         }
 
-        /* Mobile-first Sidebar - Simplified */
+        /* Mobile-first Sidebar */
         .sidebar {
             background: #2d2d2d;
             border-bottom: 1px solid #333;
@@ -125,6 +127,8 @@
             grid-template-columns: 1fr;
             gap: 12px;
             order: 2;
+            max-height: 200px;
+            overflow-y: auto;
         }
 
         .sidebar-section {
@@ -149,6 +153,7 @@
         }
 
         .stats-title::before { content: "📊"; }
+        .map-title::before { content: "🗺️"; }
 
         .stat-row {
             display: flex;
@@ -176,6 +181,43 @@
             font-weight: 600;
         }
 
+        /* Map Selection */
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .map-option {
+            background: #404040;
+            border: 2px solid #555;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .map-option:hover {
+            background: #4a4a4a;
+            border-color: #666;
+            transform: translateY(-2px);
+        }
+
+        .map-option.active {
+            background: #3498db;
+            border-color: #2980b9;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+
+        .map-option .map-icon {
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+            display: block;
+        }
+
         .game-area {
             flex: 1;
             display: flex;
@@ -188,7 +230,7 @@
 
         #gameCanvas { 
             flex: 1;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            background: #0a0a1a;
             border-radius: 8px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
             border: 1px solid #333;
@@ -233,7 +275,7 @@
             background: #3498db;
         }
 
-        /* Modern Modal - Simplified for Play Again */
+        /* Modern Modal */
         .modal {
             display: none;
             position: fixed;
@@ -379,7 +421,7 @@
             }
             
             .sidebar {
-                width: 200px;
+                width: 250px;
                 border-bottom: none;
                 border-right: 1px solid #333;
                 display: flex;
@@ -387,6 +429,7 @@
                 gap: 16px;
                 padding: 16px;
                 order: 1;
+                max-height: none;
             }
             
             .game-area {
@@ -422,6 +465,10 @@
                 padding: 8px 0;
             }
             
+            .map-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
             .modal-content {
                 padding: 40px;
             }
@@ -430,11 +477,15 @@
         /* Large Desktop */
         @media (min-width: 1200px) {
             .sidebar {
-                width: 220px;
+                width: 280px;
             }
             
             .header h1 {
                 font-size: 1.6rem;
+            }
+            
+            .map-grid {
+                grid-template-columns: repeat(3, 1fr);
             }
         }
 
@@ -458,6 +509,7 @@
             .sidebar {
                 padding: 8px;
                 gap: 8px;
+                max-height: 150px;
             }
             
             .sidebar-section {
@@ -499,6 +551,7 @@
             .pause-btn:active{ background: #f4d03f; }
             .auto-btn:active{ background: #af7ac5; }
             .play-again-header-btn:active{ background: #48c9b0; }
+            .map-btn:active{ background: #9b59b6; }
             
             .play-again-btn {
                 padding: 22px 40px;
@@ -512,12 +565,21 @@
                 transform: scale(0.98);
                 background: linear-gradient(135deg, #2ecc71, #27ae60);
             }
+            
+            .map-option:hover {
+                transform: none;
+            }
+            
+            .map-option:active {
+                background: #3498db;
+                transform: scale(0.98);
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Neon Battle Simulator - Musketeers</h1>
+        <h1>Neon Battle Simulator - Terrain System</h1>
         <div class="button-groups">
             <div class="button-row">
                 <button class="soldier-btn" id="placeSoldier">👤 Soldier</button>
@@ -530,6 +592,7 @@
                 <button class="start-btn" id="startBtn">▶️ Start</button>
                 <button class="pause-btn" id="pauseBtn">⏸️ Pause</button>
                 <button class="auto-btn" id="autoPlaceBtn">🤖 Auto</button>
+                <button class="map-btn" id="mapBtn">🗺️ Map: Playground</button>
                 <button class="play-again-header-btn" id="playAgainHeaderBtn" style="display: none;">🔁 Play Again</button>
             </div>
         </div>
@@ -558,8 +621,38 @@
                     <span class="green-stat" id="battleTime">0s</span>
                 </div>
                 <div class="stat-row">
-                    <span>Status:</span>
-                    <span id="gameStatus">Paused</span>
+                    <span>Map:</span>
+                    <span id="currentMap">Playground</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3 class="map-title">Map Selection</h3>
+                <div class="map-grid" id="mapGrid">
+                    <div class="map-option active" data-map="playground">
+                        <span class="map-icon">🏟️</span>
+                        Playground
+                    </div>
+                    <div class="map-option" data-map="valley">
+                        <span class="map-icon">🏞️</span>
+                        Valley Pass
+                    </div>
+                    <div class="map-option" data-map="bridge">
+                        <span class="map-icon">🌉</span>
+                        Bridge Battle
+                    </div>
+                    <div class="map-option" data-map="canyon">
+                        <span class="map-icon">🏜️</span>
+                        Death Canyon
+                    </div>
+                    <div class="map-option" data-map="islands">
+                        <span class="map-icon">🏝️</span>
+                        Twin Islands
+                    </div>
+                    <div class="map-option" data-map="maze">
+                        <span class="map-icon">🧩</span>
+                        Stone Maze
+                    </div>
                 </div>
             </div>
         </div>
@@ -569,7 +662,7 @@
         </div>
     </div>
 
-    <!-- Simplified Victory Modal with only Play Again button -->
+    <!-- Victory Modal -->
     <div class="modal" id="gameOverModal">
         <div class="modal-content">
             <h2>🏆 VICTORY!</h2>
@@ -578,7 +671,7 @@
                 ⏱️ Battle lasted: <span id="finalTime">0</span> seconds<br>
                 👥 Remaining units: <span id="remainingUnits">0</span><br>
                 ⚔️ Total kills: <span id="totalKills">0</span><br>
-                💥 Highest damage: <span id="highestDamage">0</span>
+                🗺️ Map: <span id="finalMap">Playground</span>
             </div>
             <div class="play-again-container">
                 <button class="play-again-btn" onclick="playAgain()">
@@ -595,17 +688,16 @@
         const gameOverModal = document.getElementById("gameOverModal");
         const winnerTextEl = document.getElementById("winnerText");
         const playAgainHeaderBtn = document.getElementById("playAgainHeaderBtn");
+        const mapBtn = document.getElementById("mapBtn");
+        const currentMapEl = document.getElementById("currentMap");
+        const finalMapEl = document.getElementById("finalMap");
+        const mapGrid = document.getElementById("mapGrid");
 
         // Stats elements
         const redCountEl = document.getElementById("redCount");
         const blueCountEl = document.getElementById("blueCount");
         const totalCountEl = document.getElementById("totalCount");
         const battleTimeEl = document.getElementById("battleTime");
-        const gameStatusEl = document.getElementById("gameStatus");
-        const finalTimeEl = document.getElementById("finalTime");
-        const remainingUnitsEl = document.getElementById("remainingUnits");
-        const totalKillsEl = document.getElementById("totalKills");
-        const highestDamageEl = document.getElementById("highestDamage");
 
         // Set canvas size to fit available space
         function resizeCanvas() {
@@ -623,6 +715,15 @@
                 canvas.width = container.clientWidth;
                 canvas.height = Math.max(300, availableHeight);
             }
+            
+            // Update map if it exists
+            if (currentMap && currentMap.name) {
+                currentMap.width = canvas.width;
+                currentMap.height = canvas.height;
+                if (currentMap.generateTerrain) {
+                    currentMap.generateTerrain();
+                }
+            }
         }
 
         let placingMode = "soldier";
@@ -639,20 +740,1141 @@
         let battleDuration = 0;
         
         // Battle state tracking for Play Again
-        let originalCircles = []; // Saves unit placements before battle starts
+        let originalCircles = [];
         let totalKills = 0;
-        let highestSingleDamage = 0;
-
-        // Map boundaries
-        const mapPadding = 20;
-        const MUSKET_RANGE = 150;
-        const BAYONET_RANGE = 60;
         
-        // NEW: Healing AI constants
-        const HEALER_MAX_RANGE = 120; // Increased range for better positioning
-        const CRITICAL_HEALTH_THRESHOLD = 0.3; // 30% health is critical
-        const LOW_HEALTH_THRESHOLD = 0.5; // 50% health is low
-        const HEALER_SAFE_DISTANCE = 40; // Distance to keep from enemies
+        // Map system
+        let currentMap = null;
+        let terrainFeatures = [];
+        let pathfindingGrid = [];
+
+        // Map configurations
+        const MAPS = {
+            playground: {
+                name: "Playground",
+                icon: "🏟️",
+                description: "Flat open battlefield with no obstacles",
+                generateTerrain: function() {
+                    terrainFeatures = [];
+                    // Just boundaries
+                    return terrainFeatures;
+                },
+                drawBackground: function() {
+                    // Simple gradient background
+                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                    gradient.addColorStop(0, '#1a1a2e');
+                    gradient.addColorStop(1, '#16213e');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw team zones
+                    const redGradient = ctx.createLinearGradient(0, 0, canvas.width/2, 0);
+                    redGradient.addColorStop(0, 'rgba(231, 76, 60, 0.1)');
+                    redGradient.addColorStop(1, 'rgba(231, 76, 60, 0.05)');
+                    ctx.fillStyle = redGradient;
+                    ctx.fillRect(0, 0, canvas.width/2, canvas.height);
+                    
+                    const blueGradient = ctx.createLinearGradient(canvas.width, 0, canvas.width/2, 0);
+                    blueGradient.addColorStop(0, 'rgba(52, 152, 219, 0.1)');
+                    blueGradient.addColorStop(1, 'rgba(52, 152, 219, 0.05)');
+                    ctx.fillStyle = blueGradient;
+                    ctx.fillRect(canvas.width/2, 0, canvas.width/2, canvas.height);
+                    
+                    // Center line
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([10, 8]);
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width / 2, 0);
+                    ctx.lineTo(canvas.width / 2, canvas.height);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // Team labels
+                    ctx.fillStyle = 'rgba(231, 76, 60, 0.8)';
+                    ctx.font = 'bold 18px "Segoe UI", system-ui';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🔴 RED', canvas.width/4, 25);
+                    
+                    ctx.fillStyle = 'rgba(52, 152, 219, 0.8)';
+                    ctx.fillText('🔵 BLUE', canvas.width*3/4, 25);
+                },
+                canPlaceAt: function(x, y, radius) {
+                    const padding = 20;
+                    return x > padding + radius && 
+                           x < canvas.width - padding - radius &&
+                           y > padding + radius && 
+                           y < canvas.height - padding - radius;
+                },
+                getMovementCost: function(x, y) {
+                    return 1; // Normal movement
+                },
+                width: canvas.width,
+                height: canvas.height
+            },
+            
+            valley: {
+                name: "Valley Pass",
+                icon: "🏞️",
+                description: "Mountain pass with narrow choke points",
+                generateTerrain: function() {
+                    terrainFeatures = [];
+                    const width = this.width;
+                    const height = this.height;
+                    
+                    // Left mountain range
+                    terrainFeatures.push({
+                        type: 'mountain',
+                        x: width * 0.15,
+                        y: height * 0.2,
+                        width: width * 0.15,
+                        height: height * 0.6,
+                        color: '#5D6D7E',
+                        impassable: true
+                    });
+                    
+                    // Right mountain range
+                    terrainFeatures.push({
+                        type: 'mountain',
+                        x: width * 0.7,
+                        y: height * 0.2,
+                        width: width * 0.15,
+                        height: height * 0.6,
+                        color: '#5D6D7E',
+                        impassable: true
+                    });
+                    
+                    // Rocky terrain in valley
+                    for (let i = 0; i < 8; i++) {
+                        terrainFeatures.push({
+                            type: 'rock',
+                            x: width * 0.4 + Math.random() * width * 0.2,
+                            y: height * 0.3 + Math.random() * height * 0.4,
+                            radius: 15 + Math.random() * 25,
+                            color: '#7F8C8D',
+                            movementCost: 2 // Slows units
+                        });
+                    }
+                    
+                    return terrainFeatures;
+                },
+                drawBackground: function() {
+                    // Valley background
+                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                    gradient.addColorStop(0, '#1B4F72');
+                    gradient.addColorStop(1, '#0E2A44');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw valley floor (lighter area)
+                    ctx.fillStyle = 'rgba(41, 128, 185, 0.1)';
+                    ctx.fillRect(canvas.width * 0.3, 0, canvas.width * 0.4, canvas.height);
+                    
+                    // Draw terrain features
+                    terrainFeatures.forEach(feature => {
+                        if (feature.type === 'mountain') {
+                            // Draw mountain with gradient
+                            const gradient = ctx.createLinearGradient(
+                                feature.x, feature.y,
+                                feature.x + feature.width, feature.y + feature.height
+                            );
+                            gradient.addColorStop(0, '#34495E');
+                            gradient.addColorStop(1, '#2C3E50');
+                            
+                            ctx.fillStyle = gradient;
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            
+                            // Mountain texture
+                            ctx.strokeStyle = '#2C3E50';
+                            ctx.lineWidth = 2;
+                            for (let i = 0; i < 5; i++) {
+                                const y = feature.y + (feature.height / 5) * i;
+                                ctx.beginPath();
+                                ctx.moveTo(feature.x, y);
+                                ctx.lineTo(feature.x + feature.width, y);
+                                ctx.stroke();
+                            }
+                        } else if (feature.type === 'rock') {
+                            // Draw rocky terrain
+                            ctx.beginPath();
+                            ctx.arc(feature.x, feature.y, feature.radius, 0, Math.PI * 2);
+                            ctx.fillStyle = feature.color;
+                            ctx.fill();
+                            
+                            // Rock texture
+                            ctx.strokeStyle = '#616A6B';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                    });
+                    
+                    // Draw choke point indicators
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width * 0.3, canvas.height * 0.5);
+                    ctx.lineTo(canvas.width * 0.7, canvas.height * 0.5);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // Map label
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = 'bold 16px "Segoe UI", system-ui';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🏞️ VALLEY PASS', canvas.width/2, 25);
+                    ctx.font = '12px "Segoe UI", system-ui';
+                    ctx.fillText('Narrow choke points', canvas.width/2, 45);
+                },
+                canPlaceAt: function(x, y, radius) {
+                    const padding = 20;
+                    const inBounds = x > padding + radius && 
+                                    x < canvas.width - padding - radius &&
+                                    y > padding + radius && 
+                                    y < canvas.height - padding - radius;
+                    
+                    if (!inBounds) return false;
+                    
+                    // Check if placement overlaps with impassable terrain
+                    for (const feature of terrainFeatures) {
+                        if (feature.impassable) {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return false;
+                            }
+                        } else if (feature.type === 'rock') {
+                            const dist = Math.hypot(x - feature.x, y - feature.y);
+                            if (dist < feature.radius + radius) {
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    return true;
+                },
+                getMovementCost: function(x, y) {
+                    // Check if position is in rocky terrain
+                    for (const feature of terrainFeatures) {
+                        if (feature.type === 'rock') {
+                            const dist = Math.hypot(x - feature.x, y - feature.y);
+                            if (dist < feature.radius) {
+                                return 2; // Double movement cost in rocky areas
+                            }
+                        }
+                    }
+                    return 1;
+                },
+                width: canvas.width,
+                height: canvas.height
+            },
+            
+            bridge: {
+                name: "Bridge Battle",
+                icon: "🌉",
+                description: "River with central bridge and shallow fords",
+                generateTerrain: function() {
+                    terrainFeatures = [];
+                    const width = this.width;
+                    const height = this.height;
+                    
+                    // River
+                    terrainFeatures.push({
+                        type: 'river',
+                        x: 0,
+                        y: height * 0.4,
+                        width: width,
+                        height: height * 0.2,
+                        color: '#3498db',
+                        impassable: true,
+                        canCrossAtBridge: true
+                    });
+                    
+                    // Bridge
+                    terrainFeatures.push({
+                        type: 'bridge',
+                        x: width * 0.4,
+                        y: height * 0.4,
+                        width: width * 0.2,
+                        height: height * 0.2,
+                        color: '#8B4513',
+                        impassable: false,
+                        isBridge: true
+                    });
+                    
+                    // Shallow fords at sides (can be crossed slowly)
+                    terrainFeatures.push({
+                        type: 'ford',
+                        x: width * 0.1,
+                        y: height * 0.45,
+                        width: 40,
+                        height: 10,
+                        color: '#5dade2',
+                        movementCost: 3 // Very slow to cross
+                    });
+                    
+                    terrainFeatures.push({
+                        type: 'ford',
+                        x: width * 0.85,
+                        y: height * 0.45,
+                        width: 40,
+                        height: 10,
+                        color: '#5dade2',
+                        movementCost: 3
+                    });
+                    
+                    // Trees on banks
+                    for (let i = 0; i < 6; i++) {
+                        terrainFeatures.push({
+                            type: 'tree',
+                            x: width * (0.2 + Math.random() * 0.1),
+                            y: height * (0.2 + Math.random() * 0.2),
+                            radius: 12 + Math.random() * 8,
+                            color: '#27ae60',
+                            movementCost: 1.5
+                        });
+                        terrainFeatures.push({
+                            type: 'tree',
+                            x: width * (0.7 + Math.random() * 0.1),
+                            y: height * (0.6 + Math.random() * 0.2),
+                            radius: 12 + Math.random() * 8,
+                            color: '#27ae60',
+                            movementCost: 1.5
+                        });
+                    }
+                    
+                    return terrainFeatures;
+                },
+                drawBackground: function() {
+                    // River background
+                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                    gradient.addColorStop(0, '#1a5276');
+                    gradient.addColorStop(1, '#0e3b5c');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // River banks (grass)
+                    ctx.fillStyle = 'rgba(39, 174, 96, 0.2)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.4);
+                    ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
+                    
+                    // Draw terrain features
+                    terrainFeatures.forEach(feature => {
+                        if (feature.type === 'river') {
+                            // Draw river with flowing water effect
+                            ctx.fillStyle = feature.color;
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            
+                            // Water texture
+                            ctx.strokeStyle = '#2980b9';
+                            ctx.lineWidth = 2;
+                            for (let i = 0; i < 5; i++) {
+                                const y = feature.y + (feature.height / 5) * i;
+                                ctx.beginPath();
+                                ctx.moveTo(0, y);
+                                ctx.lineTo(canvas.width, y);
+                                ctx.stroke();
+                            }
+                        } else if (feature.type === 'bridge') {
+                            // Draw wooden bridge
+                            ctx.fillStyle = feature.color;
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            
+                            // Bridge planks
+                            ctx.strokeStyle = '#A0522D';
+                            ctx.lineWidth = 3;
+                            for (let i = 0; i < 5; i++) {
+                                const x = feature.x + (feature.width / 5) * i;
+                                ctx.beginPath();
+                                ctx.moveTo(x, feature.y);
+                                ctx.lineTo(x, feature.y + feature.height);
+                                ctx.stroke();
+                            }
+                            
+                            // Bridge rails
+                            ctx.strokeStyle = '#8B4513';
+                            ctx.lineWidth = 5;
+                            ctx.beginPath();
+                            ctx.moveTo(feature.x, feature.y);
+                            ctx.lineTo(feature.x + feature.width, feature.y);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(feature.x, feature.y + feature.height);
+                            ctx.lineTo(feature.x + feature.width, feature.y + feature.height);
+                            ctx.stroke();
+                        } else if (feature.type === 'ford') {
+                            // Draw shallow water
+                            ctx.fillStyle = feature.color;
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            
+                            // Ford indicator
+                            ctx.strokeStyle = '#f39c12';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([3, 3]);
+                            ctx.strokeRect(feature.x, feature.y, feature.width, feature.height);
+                            ctx.setLineDash([]);
+                        } else if (feature.type === 'tree') {
+                            // Draw trees
+                            ctx.beginPath();
+                            ctx.arc(feature.x, feature.y, feature.radius, 0, Math.PI * 2);
+                            ctx.fillStyle = feature.color;
+                            ctx.fill();
+                            
+                            // Tree trunk
+                            ctx.fillStyle = '#8B4513';
+                            ctx.fillRect(feature.x - 3, feature.y, 6, feature.radius);
+                        }
+                    });
+                    
+                    // Map label
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = 'bold 16px "Segoe UI", system-ui';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🌉 BRIDGE BATTLE', canvas.width/2, 25);
+                    ctx.font = '12px "Segoe UI", system-ui';
+                    ctx.fillText('Control the bridge!', canvas.width/2, 45);
+                },
+                canPlaceAt: function(x, y, radius) {
+                    const padding = 20;
+                    const inBounds = x > padding + radius && 
+                                    x < canvas.width - padding - radius &&
+                                    y > padding + radius && 
+                                    y < canvas.height - padding - radius;
+                    
+                    if (!inBounds) return false;
+                    
+                    // Check if placement is in river (except on bridge)
+                    for (const feature of terrainFeatures) {
+                        if (feature.impassable && !feature.isBridge) {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return false;
+                            }
+                        } else if (feature.type === 'tree') {
+                            const dist = Math.hypot(x - feature.x, y - feature.y);
+                            if (dist < feature.radius + radius) {
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    return true;
+                },
+                getMovementCost: function(x, y) {
+                    // Check bridge (normal speed)
+                    for (const feature of terrainFeatures) {
+                        if (feature.type === 'bridge') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return 1;
+                            }
+                        } else if (feature.type === 'ford') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return 3; // Very slow to cross water
+                            }
+                        } else if (feature.type === 'tree') {
+                            const dist = Math.hypot(x - feature.x, y - feature.y);
+                            if (dist < feature.radius) {
+                                return 1.5; // Slower in forests
+                            }
+                        } else if (feature.type === 'river') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return 100; // Essentially impassable
+                            }
+                        }
+                    }
+                    return 1;
+                },
+                width: canvas.width,
+                height: canvas.height
+            },
+            
+            canyon: {
+                name: "Death Canyon",
+                icon: "🏜️",
+                description: "Canyon with deadly pits and narrow paths",
+                generateTerrain: function() {
+                    terrainFeatures = [];
+                    const width = this.width;
+                    const height = this.height;
+                    
+                    // Canyon walls
+                    terrainFeatures.push({
+                        type: 'canyon_wall',
+                        x: width * 0.1,
+                        y: 0,
+                        width: width * 0.8,
+                        height: height * 0.1,
+                        color: '#7d6608',
+                        impassable: true
+                    });
+                    
+                    terrainFeatures.push({
+                        type: 'canyon_wall',
+                        x: width * 0.1,
+                        y: height * 0.9,
+                        width: width * 0.8,
+                        height: height * 0.1,
+                        color: '#7d6608',
+                        impassable: true
+                    });
+                    
+                    // Bottomless pits
+                    for (let i = 0; i < 3; i++) {
+                        terrainFeatures.push({
+                            type: 'pit',
+                            x: width * (0.25 + i * 0.2),
+                            y: height * 0.5,
+                            radius: 30 + Math.random() * 20,
+                            color: '#2c3e50',
+                            deadly: true // Units fall in and die
+                        });
+                    }
+                    
+                    // Narrow winding paths
+                    terrainFeatures.push({
+                        type: 'path',
+                        x: width * 0.15,
+                        y: height * 0.2,
+                        width: 40,
+                        height: height * 0.6,
+                        color: '#b7950b',
+                        movementCost: 1
+                    });
+                    
+                    terrainFeatures.push({
+                        type: 'path',
+                        x: width * 0.85 - 40,
+                        y: height * 0.2,
+                        width: 40,
+                        height: height * 0.6,
+                        color: '#b7950b',
+                        movementCost: 1
+                    });
+                    
+                    // Rocky debris
+                    for (let i = 0; i < 10; i++) {
+                        terrainFeatures.push({
+                            type: 'debris',
+                            x: width * (0.2 + Math.random() * 0.6),
+                            y: height * (0.3 + Math.random() * 0.4),
+                            radius: 8 + Math.random() * 12,
+                            color: '#7f8c8d',
+                            movementCost: 1.8
+                        });
+                    }
+                    
+                    return terrainFeatures;
+                },
+                drawBackground: function() {
+                    // Canyon background
+                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                    gradient.addColorStop(0, '#7d6608');
+                    gradient.addColorStop(1, '#5d4037');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Canyon floor
+                    ctx.fillStyle = 'rgba(183, 149, 11, 0.3)';
+                    ctx.fillRect(canvas.width * 0.15, canvas.height * 0.2, canvas.width * 0.7, canvas.height * 0.6);
+                    
+                    // Draw terrain features
+                    terrainFeatures.forEach(feature => {
+                        if (feature.type === 'canyon_wall') {
+                            // Draw canyon walls
+                            ctx.fillStyle = feature.color;
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            
+                            // Wall texture
+                            ctx.strokeStyle = '#5d4037';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.moveTo(feature.x, feature.y + feature.height/2);
+                            ctx.lineTo(feature.x + feature.width, feature.y + feature.height/2);
+                            ctx.stroke();
+                        } else if (feature.type === 'pit') {
+                            // Draw bottomless pits
+                            ctx.beginPath();
+                            ctx.arc(feature.x, feature.y, feature.radius, 0, Math.PI * 2);
+                            ctx.fillStyle = feature.color;
+                            ctx.fill();
+                            
+                            // Pit depth effect
+                            ctx.beginPath();
+                            ctx.arc(feature.x, feature.y, feature.radius * 0.7, 0, Math.PI * 2);
+                            ctx.fillStyle = '#1c2833';
+                            ctx.fill();
+                            
+                            // Danger symbol
+                            ctx.fillStyle = '#e74c3c';
+                            ctx.font = 'bold 20px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('☠️', feature.x, feature.y);
+                        } else if (feature.type === 'path') {
+                            // Draw safe paths
+                            ctx.fillStyle = feature.color;
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            
+                            // Path markings
+                            ctx.strokeStyle = '#f1c40f';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([10, 5]);
+                            ctx.strokeRect(feature.x, feature.y, feature.width, feature.height);
+                            ctx.setLineDash([]);
+                        } else if (feature.type === 'debris') {
+                            // Draw rocky debris
+                            ctx.beginPath();
+                            ctx.arc(feature.x, feature.y, feature.radius, 0, Math.PI * 2);
+                            ctx.fillStyle = feature.color;
+                            ctx.fill();
+                        }
+                    });
+                    
+                    // Map label
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = 'bold 16px "Segoe UI", system-ui';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🏜️ DEATH CANYON', canvas.width/2, 25);
+                    ctx.font = '12px "Segoe UI", system-ui';
+                    ctx.fillText('Avoid the pits!', canvas.width/2, 45);
+                },
+                canPlaceAt: function(x, y, radius) {
+                    const padding = 20;
+                    const inBounds = x > padding + radius && 
+                                    x < canvas.width - padding - radius &&
+                                    y > padding + radius && 
+                                    y < canvas.height - padding - radius;
+                    
+                    if (!inBounds) return false;
+                    
+                    // Check if placement is in deadly pits or walls
+                    for (const feature of terrainFeatures) {
+                        if (feature.impassable || feature.deadly) {
+                            if (feature.type === 'pit') {
+                                const dist = Math.hypot(x - feature.x, y - feature.y);
+                                if (dist < feature.radius + radius) {
+                                    return false;
+                                }
+                            } else {
+                                if (x > feature.x && x < feature.x + feature.width &&
+                                    y > feature.y && y < feature.y + feature.height) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    
+                    return true;
+                },
+                getMovementCost: function(x, y) {
+                    // Check deadly pits
+                    for (const feature of terrainFeatures) {
+                        if (feature.type === 'pit') {
+                            const dist = Math.hypot(x - feature.x, y - feature.y);
+                            if (dist < feature.radius) {
+                                return 1000; // Instant death
+                            }
+                        } else if (feature.type === 'debris') {
+                            const dist = Math.hypot(x - feature.x, y - feature.y);
+                            if (dist < feature.radius) {
+                                return 1.8; // Slow in debris
+                            }
+                        }
+                    }
+                    return 1;
+                },
+                width: canvas.width,
+                height: canvas.height
+            },
+            
+            islands: {
+                name: "Twin Islands",
+                icon: "🏝️",
+                description: "Two islands connected by shallow water",
+                generateTerrain: function() {
+                    terrainFeatures = [];
+                    const width = this.width;
+                    const height = this.height;
+                    
+                    // Left island
+                    terrainFeatures.push({
+                        type: 'island',
+                        x: width * 0.1,
+                        y: height * 0.2,
+                        width: width * 0.35,
+                        height: height * 0.6,
+                        color: '#27ae60',
+                        impassable: false
+                    });
+                    
+                    // Right island
+                    terrainFeatures.push({
+                        type: 'island',
+                        x: width * 0.55,
+                        y: height * 0.2,
+                        width: width * 0.35,
+                        height: height * 0.6,
+                        color: '#27ae60',
+                        impassable: false
+                    });
+                    
+                    // Water (impassable except at shallows)
+                    terrainFeatures.push({
+                        type: 'water',
+                        x: 0,
+                        y: 0,
+                        width: width,
+                        height: height,
+                        color: '#3498db',
+                        impassable: true
+                    });
+                    
+                    // Shallow water connections
+                    terrainFeatures.push({
+                        type: 'shallow',
+                        x: width * 0.45,
+                        y: height * 0.4,
+                        width: width * 0.1,
+                        height: 30,
+                        color: '#5dade2',
+                        movementCost: 2.5,
+                        canCross: true
+                    });
+                    
+                    terrainFeatures.push({
+                        type: 'shallow',
+                        x: width * 0.45,
+                        y: height * 0.6,
+                        width: width * 0.1,
+                        height: 30,
+                        color: '#5dade2',
+                        movementCost: 2.5,
+                        canCross: true
+                    });
+                    
+                    // Palm trees
+                    for (let i = 0; i < 8; i++) {
+                        const island = i < 4 ? 0 : 1;
+                        const islandX = island === 0 ? width * 0.1 : width * 0.55;
+                        terrainFeatures.push({
+                            type: 'palm',
+                            x: islandX + width * 0.35 * Math.random(),
+                            y: height * 0.2 + height * 0.6 * Math.random(),
+                            radius: 15 + Math.random() * 10,
+                            color: '#229954',
+                            movementCost: 1.3
+                        });
+                    }
+                    
+                    return terrainFeatures;
+                },
+                drawBackground: function() {
+                    // Ocean background
+                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                    gradient.addColorStop(0, '#1b4f72');
+                    gradient.addColorStop(1, '#0c2461');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw water waves
+                    ctx.strokeStyle = 'rgba(52, 152, 219, 0.5)';
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 10; i++) {
+                        const y = (canvas.height / 10) * i;
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        for (let x = 0; x < canvas.width; x += 20) {
+                            ctx.lineTo(x, y + Math.sin(x * 0.05 + Date.now() * 0.001) * 5);
+                        }
+                        ctx.stroke();
+                    }
+                    
+                    // Draw terrain features
+                    terrainFeatures.forEach(feature => {
+                        if (feature.type === 'island') {
+                            // Draw islands
+                            ctx.fillStyle = feature.color;
+                            ctx.beginPath();
+                            ctx.roundRect(feature.x, feature.y, feature.width, feature.height, 30);
+                            ctx.fill();
+                            
+                            // Beach/sand ring
+                            ctx.strokeStyle = '#f1c40f';
+                            ctx.lineWidth = 10;
+                            ctx.beginPath();
+                            ctx.roundRect(feature.x, feature.y, feature.width, feature.height, 30);
+                            ctx.stroke();
+                        } else if (feature.type === 'shallow') {
+                            // Draw shallow water
+                            ctx.fillStyle = feature.color;
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            
+                            // Crossing indicator
+                            ctx.strokeStyle = '#f39c12';
+                            ctx.lineWidth = 3;
+                            ctx.setLineDash([5, 3]);
+                            ctx.strokeRect(feature.x, feature.y, feature.width, feature.height);
+                            ctx.setLineDash([]);
+                        } else if (feature.type === 'palm') {
+                            // Draw palm trees
+                            ctx.beginPath();
+                            ctx.arc(feature.x, feature.y, feature.radius, 0, Math.PI * 2);
+                            ctx.fillStyle = feature.color;
+                            ctx.fill();
+                            
+                            // Palm fronds
+                            ctx.fillStyle = '#27ae60';
+                            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 3) {
+                                const frondX = feature.x + Math.cos(angle) * feature.radius * 1.5;
+                                const frondY = feature.y + Math.sin(angle) * feature.radius * 1.5;
+                                ctx.beginPath();
+                                ctx.arc(frondX, frondY, feature.radius * 0.8, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        }
+                    });
+                    
+                    // Map label
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = 'bold 16px "Segoe UI", system-ui';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🏝️ TWIN ISLANDS', canvas.width/2, 25);
+                    ctx.font = '12px "Segoe UI", system-ui';
+                    ctx.fillText('Cross at shallow points', canvas.width/2, 45);
+                },
+                canPlaceAt: function(x, y, radius) {
+                    const padding = 20;
+                    const inBounds = x > padding + radius && 
+                                    x < canvas.width - padding - radius &&
+                                    y > padding + radius && 
+                                    y < canvas.height - padding - radius;
+                    
+                    if (!inBounds) return false;
+                    
+                    // Can only place on islands or shallow crossings
+                    let canPlace = false;
+                    
+                    for (const feature of terrainFeatures) {
+                        if (feature.type === 'island') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                canPlace = true;
+                            }
+                        } else if (feature.type === 'shallow') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                canPlace = true;
+                            }
+                        } else if (feature.type === 'palm') {
+                            const dist = Math.hypot(x - feature.x, y - feature.y);
+                            if (dist < feature.radius + radius) {
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    return canPlace;
+                },
+                getMovementCost: function(x, y) {
+                    // Check terrain type
+                    for (const feature of terrainFeatures) {
+                        if (feature.type === 'shallow') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return 2.5; // Slow in water
+                            }
+                        } else if (feature.type === 'palm') {
+                            const dist = Math.hypot(x - feature.x, y - feature.y);
+                            if (dist < feature.radius) {
+                                return 1.3; // Slower in palm groves
+                            }
+                        } else if (feature.type === 'water') {
+                            // Check if not on island or shallow
+                            let onLand = false;
+                            for (const f of terrainFeatures) {
+                                if (f.type === 'island' || f.type === 'shallow') {
+                                    if (x > f.x && x < f.x + f.width &&
+                                        y > f.y && y < f.y + f.height) {
+                                        onLand = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!onLand) {
+                                return 1000; // Deep water is impassable
+                            }
+                        }
+                    }
+                    return 1;
+                },
+                width: canvas.width,
+                height: canvas.height
+            },
+            
+            maze: {
+                name: "Stone Maze",
+                icon: "🧩",
+                description: "Maze with dead ends and winding paths",
+                generateTerrain: function() {
+                    terrainFeatures = [];
+                    const width = this.width;
+                    const height = this.height;
+                    const cellSize = 60;
+                    const mazeWidth = Math.floor(width / cellSize) - 4;
+                    const mazeHeight = Math.floor(height / cellSize) - 2;
+                    
+                    // Generate maze walls using recursive backtracking
+                    const maze = generateMaze(mazeWidth, mazeHeight);
+                    
+                    // Convert maze to walls
+                    const offsetX = (width - mazeWidth * cellSize) / 2;
+                    const offsetY = (height - mazeHeight * cellSize) / 2;
+                    
+                    for (let y = 0; y < mazeHeight; y++) {
+                        for (let x = 0; x < mazeWidth; x++) {
+                            const cell = maze[y][x];
+                            const posX = offsetX + x * cellSize;
+                            const posY = offsetY + y * cellSize;
+                            
+                            // Top wall
+                            if (cell.walls[0]) {
+                                terrainFeatures.push({
+                                    type: 'maze_wall',
+                                    x: posX,
+                                    y: posY,
+                                    width: cellSize,
+                                    height: 10,
+                                    color: '#7f8c8d',
+                                    impassable: true
+                                });
+                            }
+                            
+                            // Right wall
+                            if (cell.walls[1]) {
+                                terrainFeatures.push({
+                                    type: 'maze_wall',
+                                    x: posX + cellSize - 10,
+                                    y: posY,
+                                    width: 10,
+                                    height: cellSize,
+                                    color: '#7f8c8d',
+                                    impassable: true
+                                });
+                            }
+                            
+                            // Bottom wall
+                            if (cell.walls[2]) {
+                                terrainFeatures.push({
+                                    type: 'maze_wall',
+                                    x: posX,
+                                    y: posY + cellSize - 10,
+                                    width: cellSize,
+                                    height: 10,
+                                    color: '#7f8c8d',
+                                    impassable: true
+                                });
+                            }
+                            
+                            // Left wall
+                            if (cell.walls[3]) {
+                                terrainFeatures.push({
+                                    type: 'maze_wall',
+                                    x: posX,
+                                    y: posY,
+                                    width: 10,
+                                    height: cellSize,
+                                    color: '#7f8c8d',
+                                    impassable: true
+                                });
+                            }
+                        }
+                    }
+                    
+                    // Add maze entrance and exit
+                    terrainFeatures.push({
+                        type: 'entrance',
+                        x: offsetX,
+                        y: offsetY + cellSize * Math.floor(mazeHeight/2),
+                        width: 20,
+                        height: 40,
+                        color: '#27ae60',
+                        team: 'red'
+                    });
+                    
+                    terrainFeatures.push({
+                        type: 'exit',
+                        x: offsetX + mazeWidth * cellSize - 20,
+                        y: offsetY + cellSize * Math.floor(mazeHeight/2),
+                        width: 20,
+                        height: 40,
+                        color: '#3498db',
+                        team: 'blue'
+                    });
+                    
+                    // Add treasure chests in dead ends
+                    for (let i = 0; i < 5; i++) {
+                        terrainFeatures.push({
+                            type: 'treasure',
+                            x: offsetX + cellSize * (2 + Math.random() * (mazeWidth - 4)),
+                            y: offsetY + cellSize * (2 + Math.random() * (mazeHeight - 4)),
+                            radius: 15,
+                            color: '#f39c12',
+                            movementCost: 1
+                        });
+                    }
+                    
+                    return terrainFeatures;
+                    
+                    function generateMaze(width, height) {
+                        const maze = [];
+                        for (let y = 0; y < height; y++) {
+                            maze[y] = [];
+                            for (let x = 0; x < width; x++) {
+                                maze[y][x] = {
+                                    walls: [true, true, true, true], // top, right, bottom, left
+                                    visited: false
+                                };
+                            }
+                        }
+                        
+                        // Recursive backtracking algorithm
+                        const stack = [];
+                        let current = {x: 0, y: 0};
+                        maze[0][0].visited = true;
+                        
+                        while (true) {
+                            const neighbors = [];
+                            const {x, y} = current;
+                            
+                            // Check neighbors
+                            if (y > 0 && !maze[y-1][x].visited) neighbors.push({x, y: y-1, dir: 0}); // top
+                            if (x < width-1 && !maze[y][x+1].visited) neighbors.push({x: x+1, y, dir: 1}); // right
+                            if (y < height-1 && !maze[y+1][x].visited) neighbors.push({x, y: y+1, dir: 2}); // bottom
+                            if (x > 0 && !maze[y][x-1].visited) neighbors.push({x: x-1, y, dir: 3}); // left
+                            
+                            if (neighbors.length > 0) {
+                                const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                                stack.push(current);
+                                
+                                // Remove walls between current and next
+                                maze[y][x].walls[next.dir] = false;
+                                maze[next.y][next.x].walls[(next.dir + 2) % 4] = false;
+                                
+                                current = {x: next.x, y: next.y};
+                                maze[next.y][next.x].visited = true;
+                            } else if (stack.length > 0) {
+                                current = stack.pop();
+                            } else {
+                                break;
+                            }
+                        }
+                        
+                        return maze;
+                    }
+                },
+                drawBackground: function() {
+                    // Stone background
+                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                    gradient.addColorStop(0, '#424949');
+                    gradient.addColorStop(1, '#2c3e50');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Maze floor
+                    ctx.fillStyle = 'rgba(189, 195, 199, 0.1)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw terrain features
+                    terrainFeatures.forEach(feature => {
+                        if (feature.type === 'maze_wall') {
+                            // Draw stone walls
+                            ctx.fillStyle = feature.color;
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            
+                            // Wall texture
+                            ctx.strokeStyle = '#616a6b';
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(feature.x, feature.y, feature.width, feature.height);
+                        } else if (feature.type === 'entrance') {
+                            // Draw red team entrance
+                            ctx.fillStyle = '#e74c3c';
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            ctx.fillStyle = 'white';
+                            ctx.font = 'bold 14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('🔴', feature.x + feature.width/2, feature.y + feature.height/2);
+                        } else if (feature.type === 'exit') {
+                            // Draw blue team exit
+                            ctx.fillStyle = '#3498db';
+                            ctx.fillRect(feature.x, feature.y, feature.width, feature.height);
+                            ctx.fillStyle = 'white';
+                            ctx.font = 'bold 14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('🔵', feature.x + feature.width/2, feature.y + feature.height/2);
+                        } else if (feature.type === 'treasure') {
+                            // Draw treasure chests
+                            ctx.fillStyle = feature.color;
+                            ctx.fillRect(feature.x - feature.radius, feature.y - feature.radius/2, 
+                                       feature.radius * 2, feature.radius);
+                            
+                            // Chest details
+                            ctx.fillStyle = '#d68910';
+                            ctx.fillRect(feature.x - feature.radius * 0.8, feature.y - feature.radius * 0.4,
+                                       feature.radius * 1.6, feature.radius * 0.4);
+                            ctx.fillStyle = '#f7dc6f';
+                            ctx.fillRect(feature.x - 3, feature.y - feature.radius * 0.2, 6, feature.radius * 0.4);
+                        }
+                    });
+                    
+                    // Map label
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = 'bold 16px "Segoe UI", system-ui';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🧩 STONE MAZE', canvas.width/2, 25);
+                    ctx.font = '12px "Segoe UI", system-ui';
+                    ctx.fillText('Navigate the labyrinth!', canvas.width/2, 45);
+                },
+                canPlaceAt: function(x, y, radius) {
+                    // Only allow placement in team starting areas
+                    for (const feature of terrainFeatures) {
+                        if (feature.type === 'entrance' && feature.team === 'red') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return true;
+                            }
+                        } else if (feature.type === 'exit' && feature.team === 'blue') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return true;
+                            }
+                        } else if (feature.impassable) {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    return false;
+                },
+                getMovementCost: function(x, y) {
+                    // Normal movement in maze paths
+                    return 1;
+                },
+                width: canvas.width,
+                height: canvas.height
+            }
+        };
 
         // Initialize canvas size
         resizeCanvas();
@@ -678,148 +1900,141 @@
             }, 2500);
         }
 
-        // Enhanced map drawing
-        function drawMap() {
-            // Clear with gradient background
-            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            gradient.addColorStop(0, '#1a1a2e');
-            gradient.addColorStop(1, '#16213e');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw team zones
-            const redGradient = ctx.createLinearGradient(0, 0, canvas.width/2, 0);
-            redGradient.addColorStop(0, 'rgba(231, 76, 60, 0.1)');
-            redGradient.addColorStop(1, 'rgba(231, 76, 60, 0.05)');
-            ctx.fillStyle = redGradient;
-            ctx.fillRect(0, 0, canvas.width/2, canvas.height);
-            
-            const blueGradient = ctx.createLinearGradient(canvas.width, 0, canvas.width/2, 0);
-            blueGradient.addColorStop(0, 'rgba(52, 152, 219, 0.1)');
-            blueGradient.addColorStop(1, 'rgba(52, 152, 219, 0.05)');
-            ctx.fillStyle = blueGradient;
-            ctx.fillRect(canvas.width/2, 0, canvas.width/2, canvas.height);
-            
-            // Draw center line
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([10, 8]);
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0);
-            ctx.lineTo(canvas.width / 2, canvas.height);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Draw team labels
-            ctx.fillStyle = 'rgba(231, 76, 60, 0.8)';
-            ctx.font = 'bold 18px "Segoe UI", system-ui';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('🔴 RED', canvas.width/4, 25);
-            
-            ctx.fillStyle = 'rgba(52, 152, 219, 0.8)';
-            ctx.fillText('🔵 BLUE', canvas.width*3/4, 25);
-            
-            // Draw map boundaries
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([4, 4]);
-            
-            ctx.beginPath();
-            ctx.rect(mapPadding, mapPadding, canvas.width - mapPadding*2, canvas.height - mapPadding*2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        function drawGhost() {
-            if (!showGhost || placingMode === "delete") return;
-            
-            let color, radius = baseUnitSize * (Math.min(canvas.width, canvas.height) / 800);
-            let team = mouseX < canvas.width/2 ? "red" : "blue";
-            let type = "soldier";
-            
-            if (placingMode === "soldier") {
-                type = "soldier";
-                color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
-            } else if (placingMode === "tank") {
-                type = "tank";
-                color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
-                radius = baseUnitSize * 1.3 * (Math.min(canvas.width, canvas.height) / 800);
-            } else if (placingMode === "healer") {
-                type = "healer";
-                color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
-                radius = baseUnitSize * (Math.min(canvas.width, canvas.height) / 800);
-            } else if (placingMode === "musketeer") {
-                type = "musketeer";
-                color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
-                radius = baseUnitSize * 0.9 * (Math.min(canvas.width, canvas.height) / 800);
-            }
+        // Initialize with playground map
+        function loadMap(mapName) {
+            if (MAPS[mapName]) {
+                currentMap = MAPS[mapName];
+                currentMap.width = canvas.width;
+                currentMap.height = canvas.height;
+                currentMap.generateTerrain();
                 
-            // Check if position is valid
-            const withinBounds = mouseX > mapPadding + radius && 
-                               mouseX < canvas.width - mapPadding - radius &&
-                               mouseY > mapPadding + radius && 
-                               mouseY < canvas.height - mapPadding - radius;
-            
-            let blocked = circles.some(c => Math.hypot(c.x - mouseX, c.y - mouseY) < (c.radius + radius) * 0.8);
-            
-            if (blocked || !withinBounds) {
-                color = "rgba(231, 76, 60, 0.8)";
-            }
-            
-            ctx.beginPath();
-            ctx.arc(mouseX, mouseY, radius, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-            
-            // Draw unit-specific symbols
-            if (type === "healer") {
-                ctx.beginPath();
-                ctx.moveTo(mouseX - radius/2, mouseY);
-                ctx.lineTo(mouseX + radius/2, mouseY);
-                ctx.moveTo(mouseX, mouseY - radius/2);
-                ctx.lineTo(mouseX, mouseY + radius/2);
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            } else if (type === "musketeer") {
-                // Draw musket shape
-                ctx.beginPath();
-                ctx.moveTo(mouseX - radius, mouseY);
-                ctx.lineTo(mouseX + radius, mouseY);
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-                ctx.lineWidth = 3;
-                ctx.stroke();
+                // Update UI
+                currentMapEl.textContent = currentMap.name;
+                finalMapEl.textContent = currentMap.name;
+                mapBtn.innerHTML = `🗺️ Map: ${currentMap.name}`;
                 
-                // Draw musket tip
-                ctx.beginPath();
-                ctx.arc(mouseX + radius, mouseY, 3, 0, Math.PI * 2);
-                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-                ctx.fill();
+                // Update map selection UI
+                document.querySelectorAll('.map-option').forEach(option => {
+                    option.classList.remove('active');
+                    if (option.dataset.map === mapName) {
+                        option.classList.add('active');
+                    }
+                });
+                
+                // Clear units when switching maps
+                circles = [];
+                showNotification(`Loaded map: ${currentMap.name}`, 'info');
             }
         }
 
-        // Get directional damage multiplier
-        function getDirectionalDamageMultiplier(attacker, target) {
-            const dx = target.x - attacker.x;
-            const dy = target.y - attacker.y;
-            
-            const attackAngle = Math.atan2(dy, dx);
-            const targetAngle = Math.atan2(target.velY, target.velX);
-            
-            let angleDiff = attackAngle - targetAngle;
-            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-            
-            const absAngleDiff = Math.abs(angleDiff);
-            
-            if (absAngleDiff < Math.PI / 6) {
-                return 1.0;
-            } else if (absAngleDiff > (5 * Math.PI) / 6) {
-                return 2.0;
-            } else {
-                return 1.25;
+        // Initialize with playground map
+        loadMap('playground');
+
+        // Map selection event listeners
+        mapGrid.addEventListener('click', (e) => {
+            const mapOption = e.target.closest('.map-option');
+            if (mapOption) {
+                const mapName = mapOption.dataset.map;
+                loadMap(mapName);
             }
+        });
+
+        // Map button to cycle through maps
+        let mapIndex = 0;
+        const mapNames = Object.keys(MAPS);
+        mapBtn.addEventListener('click', () => {
+            mapIndex = (mapIndex + 1) % mapNames.length;
+            loadMap(mapNames[mapIndex]);
+        });
+
+        // Helper function to check if point is in terrain
+        function pointInTerrain(x, y) {
+            for (const feature of terrainFeatures) {
+                if (feature.impassable || feature.deadly) {
+                    if (feature.type === 'pit' || feature.type === 'rock' || feature.type === 'tree' || 
+                        feature.type === 'palm' || feature.type === 'debris' || feature.type === 'treasure') {
+                        const dist = Math.hypot(x - feature.x, y - feature.y);
+                        if (dist < feature.radius) {
+                            return true;
+                        }
+                    } else {
+                        if (x > feature.x && x < feature.x + feature.width &&
+                            y > feature.y && y < feature.y + feature.height) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Improved pathfinding helper
+        function getPathAroundTerrain(startX, startY, targetX, targetY, radius) {
+            // Simple obstacle avoidance
+            const dx = targetX - startX;
+            const dy = targetY - startY;
+            const dist = Math.hypot(dx, dy);
+            
+            if (dist === 0) return { x: targetX, y: targetY };
+            
+            // Check for direct path
+            const steps = Math.ceil(dist);
+            let blocked = false;
+            
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const checkX = startX + dx * t;
+                const checkY = startY + dy * t;
+                
+                if (pointInTerrain(checkX, checkY)) {
+                    blocked = true;
+                    break;
+                }
+            }
+            
+            if (!blocked) {
+                return { x: targetX, y: targetY };
+            }
+            
+            // Try to find path around obstacles
+            // Simple approach: move perpendicular to find clear path
+            const angle = Math.atan2(dy, dx);
+            const perpendicular = angle + Math.PI / 2;
+            
+            // Try both sides
+            for (let side = -1; side <= 1; side += 2) {
+                const offsetX = Math.cos(perpendicular) * radius * 3 * side;
+                const offsetY = Math.sin(perpendicular) * radius * 3 * side;
+                
+                const waypointX = startX + offsetX;
+                const waypointY = startY + offsetY;
+                
+                // Check if waypoint is clear
+                if (!pointInTerrain(waypointX, waypointY)) {
+                    // Check path to waypoint
+                    let pathClear = true;
+                    const wpDist = Math.hypot(waypointX - startX, waypointY - startY);
+                    const wpSteps = Math.ceil(wpDist);
+                    
+                    for (let i = 0; i <= wpSteps; i++) {
+                        const t = i / wpSteps;
+                        const checkX = startX + (waypointX - startX) * t;
+                        const checkY = startY + (waypointY - startY) * t;
+                        
+                        if (pointInTerrain(checkX, checkY)) {
+                            pathClear = false;
+                            break;
+                        }
+                    }
+                    
+                    if (pathClear) {
+                        return { x: waypointX, y: waypointY };
+                    }
+                }
+            }
+            
+            // Fallback: move away from terrain
+            return { x: startX + dx * 0.1, y: startY + dy * 0.1 };
         }
 
         class DamageText {
@@ -891,13 +2106,11 @@
                 const currentX = this.startX + (this.targetX - this.startX) * this.progress;
                 const currentY = this.startY + (this.targetY - this.startY) * this.progress;
                 
-                // Draw musket ball trail
                 ctx.beginPath();
                 ctx.arc(currentX, currentY, this.hit ? 4 : 3, 0, Math.PI * 2);
                 ctx.fillStyle = this.color;
                 ctx.fill();
                 
-                // Draw smoke trail
                 ctx.beginPath();
                 ctx.arc(currentX, currentY, this.hit ? 8 : 6, 0, Math.PI * 2);
                 ctx.fillStyle = this.hit ? 
@@ -905,7 +2118,6 @@
                     `rgba(149, 165, 166, ${0.3 * this.life})`;
                 ctx.fill();
                 
-                // Draw firing flash at start
                 if (this.progress < 0.1) {
                     ctx.beginPath();
                     ctx.arc(this.startX, this.startY, 10 * (1 - this.progress * 10), 0, Math.PI * 2);
@@ -939,29 +2151,24 @@
                 const currentX = this.startX + (this.targetX - this.startX) * this.progress;
                 const currentY = this.startY + (this.targetY - this.startY) * this.progress;
                 
-                // Draw healing line with green glow
-                ctx.beginPath();
-                ctx.moveTo(this.startX, this.startY);
-                ctx.lineTo(currentX, currentY);
-                
                 const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.01);
                 ctx.strokeStyle = `rgba(46, 204, 113, ${0.7 * this.life})`;
                 ctx.lineWidth = 4 + pulse;
                 ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(this.startX, this.startY);
+                ctx.lineTo(currentX, currentY);
                 ctx.stroke();
                 
-                // Outer glow effect
                 ctx.strokeStyle = `rgba(46, 204, 113, ${0.3 * this.life})`;
                 ctx.lineWidth = 10;
                 ctx.stroke();
                 
-                // Draw healing orb at the end
                 ctx.beginPath();
                 ctx.arc(currentX, currentY, 6, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(46, 204, 113, ${this.life})`;
                 ctx.fill();
                 
-                // Highlight the unit being healed
                 if (this.healingUnitId && this.progress > 0.8) {
                     const healingUnit = circles.find(c => c.id === this.healingUnitId);
                     if (healingUnit) {
@@ -1043,15 +2250,13 @@
                     this.health = 80;
                     this.maxHealth = 80;
                     this.attackPower = 0;
-                    this.healPower = 8; // Increased healing power
-                    this.healCooldown = 250; // Faster healing
-                    this.maxSpeed = 1.8 * sizeMultiplier; // Faster movement
+                    this.healPower = 8;
+                    this.healCooldown = 250;
+                    this.maxSpeed = 1.8 * sizeMultiplier;
                     this.turnSpeed = 0.15;
-                    this.healRange = 50; // Increased range
+                    this.healRange = 50;
                     this.currentHealTarget = null;
-                    this.healPriority = 0; // For AI decision making
-                    this.lastHealTime = 0;
-                    this.healRadius = HEALER_MAX_RANGE * sizeMultiplier;
+                    this.healRadius = 120 * sizeMultiplier;
                 } else if (type === 'musketeer') {
                     this.radius = baseUnitSize * 0.9 * sizeMultiplier;
                     this.health = 60;
@@ -1060,8 +2265,8 @@
                     this.attackCooldown = 1200;
                     this.maxSpeed = 1.6 * sizeMultiplier;
                     this.turnSpeed = 0.13;
-                    this.shootingRange = MUSKET_RANGE * sizeMultiplier;
-                    this.bayonetRange = BAYONET_RANGE * sizeMultiplier;
+                    this.shootingRange = 150 * sizeMultiplier;
+                    this.bayonetRange = 60 * sizeMultiplier;
                     this.isCharging = false;
                     this.missChance = 0.35;
                     this.lastShot = 0;
@@ -1076,7 +2281,9 @@
                 this.lastHealth = this.health;
                 this.totalDamageDealt = 0;
                 this.kills = 0;
-                this.beingTargeted = 0; // Counter for how many enemies are targeting this unit
+                this.beingTargeted = 0;
+                this.avoidanceVector = { x: 0, y: 0 };
+                this.terrainAwareness = 0;
             }
 
             draw() {
@@ -1089,7 +2296,6 @@
                     this.x, this.y, this.radius
                 );
                 
-                // Team colors for all units
                 if (this.team === 'red') {
                     if (this.type === 'tank') {
                         gradient.addColorStop(0, '#ff7979');
@@ -1135,22 +2341,11 @@
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
                     ctx.lineWidth = 2;
                     ctx.stroke();
-                    
-                    // Show healing radius when selected or healing
-                    if (placingMode === "healer" || this.currentHealTarget) {
-                        ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.healRadius, 0, Math.PI * 2);
-                        ctx.strokeStyle = 'rgba(46, 204, 113, 0.2)';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                    }
                 } else if (this.type === 'musketeer') {
-                    // Draw musket
                     ctx.save();
                     ctx.translate(this.x, this.y);
                     ctx.rotate(this.facingAngle);
                     
-                    // Musket barrel
                     ctx.beginPath();
                     ctx.moveTo(-this.radius, 0);
                     ctx.lineTo(this.radius, 0);
@@ -1158,7 +2353,6 @@
                     ctx.lineWidth = this.isCharging ? 4 : 3;
                     ctx.stroke();
                     
-                    // Bayonet when charging
                     if (this.isCharging) {
                         ctx.beginPath();
                         ctx.moveTo(this.radius, 0);
@@ -1167,7 +2361,6 @@
                         ctx.lineWidth = 2;
                         ctx.stroke();
                         
-                        // Bayonet triangle
                         ctx.beginPath();
                         ctx.moveTo(this.radius + 8, 0);
                         ctx.lineTo(this.radius + 4, -3);
@@ -1176,7 +2369,6 @@
                         ctx.fillStyle = '#bdc3c7';
                         ctx.fill();
                     } else {
-                        // Musket tip
                         ctx.beginPath();
                         ctx.arc(this.radius, 0, 3, 0, Math.PI * 2);
                         ctx.fillStyle = '#34495e';
@@ -1185,7 +2377,6 @@
                     
                     ctx.restore();
                     
-                    // Show charging indicator
                     if (this.isCharging) {
                         ctx.beginPath();
                         ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
@@ -1209,35 +2400,13 @@
                 ctx.fillStyle = healthColor;
                 ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth * healthPercent, 4);
                 
-                // Show reloading indicator for musketeers
-                if (this.type === 'musketeer' && !this.isCharging) {
-                    const now = performance.now();
-                    const reloadProgress = Math.min(1, (now - this.lastShot) / this.attackCooldown);
-                    
-                    if (reloadProgress < 1) {
-                        // Draw reloading circle
-                        ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress));
-                        ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)';
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
-                    }
-                }
-                
-                // Show healing target indicator for healers
-                if (this.type === 'healer' && this.currentHealTarget) {
-                    const target = circles.find(c => c.id === this.currentHealTarget);
-                    if (target) {
-                        // Draw line to healing target
-                        ctx.beginPath();
-                        ctx.moveTo(this.x, this.y);
-                        ctx.lineTo(target.x, target.y);
-                        ctx.strokeStyle = 'rgba(46, 204, 113, 0.4)';
-                        ctx.lineWidth = 2;
-                        ctx.setLineDash([5, 3]);
-                        ctx.stroke();
-                        ctx.setLineDash([]);
-                    }
+                // Show terrain awareness indicator
+                if (this.terrainAwareness > 0.5) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 3, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(52, 152, 219, ${this.terrainAwareness * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                 }
             }
 
@@ -1261,54 +2430,189 @@
                 this.x += pushX;
                 this.y += pushY;
                 
-                // Keep units within boundaries
-                this.x = Math.max(mapPadding + this.radius, Math.min(canvas.width - mapPadding - this.radius, this.x));
-                this.y = Math.max(mapPadding + this.radius, Math.min(canvas.height - mapPadding - this.radius, this.y));
+                // Keep units within map boundaries
+                const padding = 20;
+                this.x = Math.max(padding + this.radius, Math.min(canvas.width - padding - this.radius, this.x));
+                this.y = Math.max(padding + this.radius, Math.min(canvas.height - padding - this.radius, this.y));
             }
             
-            // NEW: Calculate healing priority score for a target
+            // NEW: Terrain avoidance system
+            avoidTerrain() {
+                this.avoidanceVector = { x: 0, y: 0 };
+                this.terrainAwareness = 0;
+                
+                // Check nearby terrain features
+                for (const feature of terrainFeatures) {
+                    if (feature.impassable || feature.deadly) {
+                        let dist, dx, dy;
+                        
+                        if (feature.type === 'pit' || feature.type === 'rock' || feature.type === 'tree' || 
+                            feature.type === 'palm' || feature.type === 'debris' || feature.type === 'treasure') {
+                            // Circular features
+                            dx = this.x - feature.x;
+                            dy = this.y - feature.y;
+                            dist = Math.hypot(dx, dy);
+                            const minDist = feature.radius + this.radius;
+                            
+                            if (dist < minDist + 50) { // Detection range
+                                const awareness = 1 - Math.min(1, dist / (minDist + 50));
+                                this.terrainAwareness = Math.max(this.terrainAwareness, awareness);
+                                
+                                if (dist < minDist) {
+                                    // Push away from terrain
+                                    const force = (minDist - dist) / minDist;
+                                    this.avoidanceVector.x += (dx / dist) * force * 2;
+                                    this.avoidanceVector.y += (dy / dist) * force * 2;
+                                } else if (dist < minDist + 20) {
+                                    // Gentle avoidance when approaching
+                                    const force = 0.5 * (1 - (dist - minDist) / 20);
+                                    this.avoidanceVector.x += (dx / dist) * force;
+                                    this.avoidanceVector.y += (dy / dist) * force;
+                                }
+                            }
+                        } else {
+                            // Rectangular features (walls, rivers, etc.)
+                            // Find closest point on rectangle
+                            const closestX = Math.max(feature.x, Math.min(this.x, feature.x + feature.width));
+                            const closestY = Math.max(feature.y, Math.min(this.y, feature.y + feature.height));
+                            
+                            dx = this.x - closestX;
+                            dy = this.y - closestY;
+                            dist = Math.hypot(dx, dy);
+                            const minDist = this.radius;
+                            
+                            if (dist < minDist + 50) {
+                                const awareness = 1 - Math.min(1, dist / (minDist + 50));
+                                this.terrainAwareness = Math.max(this.terrainAwareness, awareness);
+                                
+                                if (dist < minDist) {
+                                    // Push away from terrain
+                                    const force = (minDist - dist) / minDist;
+                                    this.avoidanceVector.x += (dx / dist) * force * 2;
+                                    this.avoidanceVector.y += (dy / dist) * force * 2;
+                                } else if (dist < minDist + 30) {
+                                    // Gentle avoidance when approaching
+                                    const force = 0.3 * (1 - (dist - minDist) / 30);
+                                    this.avoidanceVector.x += (dx / dist) * force;
+                                    this.avoidanceVector.y += (dy / dist) * force;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Apply terrain avoidance
+                if (this.avoidanceVector.x !== 0 || this.avoidanceVector.y !== 0) {
+                    const avoidanceDist = Math.hypot(this.avoidanceVector.x, this.avoidanceVector.y);
+                    if (avoidanceDist > 0) {
+                        this.x += this.avoidanceVector.x;
+                        this.y += this.avoidanceVector.y;
+                    }
+                }
+                
+                // Apply terrain movement cost
+                const movementCost = currentMap.getMovementCost(this.x, this.y);
+                if (movementCost >= 100) {
+                    // Deadly terrain - instant death
+                    this.health = 0;
+                } else if (movementCost > 1) {
+                    // Slowing terrain - reduce effective speed
+                    this.velX *= (1 / movementCost);
+                    this.velY *= (1 / movementCost);
+                }
+            }
+            
+            // NEW: Smart movement with terrain consideration
+            moveTowards(targetX, targetY, speedMultiplier = 1) {
+                const dx = targetX - this.x;
+                const dy = targetY - this.y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist > 0) {
+                    // Check if direct path is blocked by terrain
+                    const steps = Math.ceil(dist / 10);
+                    let blocked = false;
+                    
+                    for (let i = 0; i <= steps; i++) {
+                        const t = i / steps;
+                        const checkX = this.x + dx * t;
+                        const checkY = this.y + dy * t;
+                        
+                        if (pointInTerrain(checkX, checkY)) {
+                            blocked = true;
+                            break;
+                        }
+                    }
+                    
+                    if (blocked) {
+                        // Use pathfinding to avoid terrain
+                        const waypoint = getPathAroundTerrain(this.x, this.y, targetX, targetY, this.radius);
+                        const wpDx = waypoint.x - this.x;
+                        const wpDy = waypoint.y - this.y;
+                        const wpDist = Math.hypot(wpDx, wpDy);
+                        
+                        if (wpDist > 0) {
+                            const desiredX = wpDx / wpDist;
+                            const desiredY = wpDy / wpDist;
+                            
+                            this.velX += (desiredX * this.maxSpeed * speedMultiplier * 0.7 - this.velX) * this.turnSpeed;
+                            this.velY += (desiredY * this.maxSpeed * speedMultiplier * 0.7 - this.velY) * this.turnSpeed;
+                        }
+                    } else {
+                        // Direct path is clear
+                        const desiredX = dx / dist;
+                        const desiredY = dy / dist;
+                        
+                        this.velX += (desiredX * this.maxSpeed * speedMultiplier - this.velX) * this.turnSpeed;
+                        this.velY += (desiredY * this.maxSpeed * speedMultiplier - this.velY) * this.turnSpeed;
+                    }
+                    
+                    this.x += this.velX;
+                    this.y += this.velY;
+                }
+            }
+
             calculateHealPriority(target) {
                 let priority = 0;
                 const healthPercent = target.health / target.maxHealth;
                 const distance = this.distanceTo(target);
                 
-                // 1. Health level (most important)
-                if (healthPercent <= CRITICAL_HEALTH_THRESHOLD) {
-                    priority += 100; // Critical health gets highest priority
-                } else if (healthPercent <= LOW_HEALTH_THRESHOLD) {
-                    priority += 50; // Low health gets high priority
+                // Health level
+                if (healthPercent <= 0.3) {
+                    priority += 100;
+                } else if (healthPercent <= 0.5) {
+                    priority += 50;
                 } else if (healthPercent < 0.8) {
-                    priority += 20; // Damaged but not critical
+                    priority += 20;
                 }
                 
-                // 2. Unit type priority
+                // Unit type priority
                 if (target.type === 'healer') {
-                    priority += 40; // Healers should heal other healers
+                    priority += 40;
                 } else if (target.type === 'musketeer') {
-                    priority += 30; // Musketeers are valuable
+                    priority += 30;
                 } else if (target.type === 'tank') {
-                    priority += 25; // Tanks can take more hits
+                    priority += 25;
                 } else if (target.type === 'soldier') {
-                    priority += 15; // Basic soldiers
+                    priority += 15;
                 }
                 
-                // 3. Distance penalty (closer is better)
+                // Distance penalty
                 const maxDistance = this.healRadius;
                 const distancePenalty = (distance / maxDistance) * 30;
                 priority -= distancePenalty;
                 
-                // 4. Being targeted by enemies
+                // Being targeted by enemies
                 priority += target.beingTargeted * 10;
                 
-                // 5. Can't heal at full health
+                // Can't heal at full health
                 if (healthPercent >= 0.99) {
-                    priority = -1000; // Don't heal full health units
+                    priority = -1000;
                 }
                 
                 return priority;
             }
             
-            // NEW: Find best healing target
             findBestHealTarget(allies) {
                 let bestTarget = null;
                 let highestPriority = -Infinity;
@@ -1331,21 +2635,18 @@
                 return bestTarget;
             }
             
-            // NEW: Check for nearby enemies to avoid
             hasNearbyEnemies(enemies) {
                 for (let enemy of enemies) {
-                    if (this.distanceTo(enemy) < HEALER_SAFE_DISTANCE) {
+                    if (this.distanceTo(enemy) < 60) {
                         return true;
                     }
                 }
                 return false;
             }
             
-            // NEW: Find safe position relative to allies
             findSafePosition(allies, enemies) {
                 if (allies.length === 0) return { x: this.x, y: this.y };
                 
-                // Calculate center of allies
                 let centerX = 0, centerY = 0;
                 for (let ally of allies) {
                     centerX += ally.x;
@@ -1354,7 +2655,6 @@
                 centerX /= allies.length;
                 centerY /= allies.length;
                 
-                // Try to stay behind allies relative to enemies
                 if (enemies.length > 0) {
                     let enemyCenterX = 0, enemyCenterY = 0;
                     for (let enemy of enemies) {
@@ -1364,13 +2664,11 @@
                     enemyCenterX /= enemies.length;
                     enemyCenterY /= enemies.length;
                     
-                    // Vector from enemies to allies
                     const dx = centerX - enemyCenterX;
                     const dy = centerY - enemyCenterY;
                     const dist = Math.hypot(dx, dy);
                     
                     if (dist > 0) {
-                        // Position behind allies (further from enemies)
                         const safeDistance = Math.min(80, dist * 0.7);
                         return {
                             x: centerX + (dx / dist) * safeDistance,
@@ -1379,7 +2677,6 @@
                     }
                 }
                 
-                // Default: stay close to center of allies
                 return { x: centerX, y: centerY };
             }
 
@@ -1387,6 +2684,7 @@
                 if (!gameRunning) return;
 
                 this.applySeparation([...enemies, ...allies]);
+                this.avoidTerrain(); // NEW: Terrain avoidance
                 
                 // Update beingTargeted counter
                 this.beingTargeted = 0;
@@ -1399,46 +2697,25 @@
                     }
                 }
 
-                // SMART HEALER AI - Advanced healing logic
+                // SMART HEALER AI
                 if (this.type === 'healer') {
-                    // Find all allies that need healing
                     const alliesNeedingHeal = allies.filter(a => 
                         a !== this && 
                         a.health > 0 && 
-                        a.health < a.maxHealth * 0.99 && // Not full health
-                        this.distanceTo(a) <= this.healRadius // In range
+                        a.health < a.maxHealth * 0.99 &&
+                        this.distanceTo(a) <= this.healRadius
                     );
                     
                     if (alliesNeedingHeal.length === 0) {
-                        // No one needs healing - find safe position
                         this.currentHealTarget = null;
                         
                         if (allies.length > 1) {
-                            // Stay with the group but avoid enemies
                             const safePos = this.findSafePosition(allies, enemies);
-                            const dx = safePos.x - this.x;
-                            const dy = safePos.y - this.y;
-                            const dist = Math.hypot(dx, dy);
-                            
-                            if (dist > 10) {
-                                const desiredX = dx / dist;
-                                const desiredY = dy / dist;
-                                const moveSpeed = Math.min(this.maxSpeed, dist * 0.1);
-                                
-                                this.velX += (desiredX * moveSpeed - this.velX) * this.turnSpeed;
-                                this.velY += (desiredY * moveSpeed - this.velY) * this.turnSpeed;
-                                this.x += this.velX;
-                                this.y += this.velY;
-                            } else {
-                                // Slow down when in position
-                                this.velX *= 0.8;
-                                this.velY *= 0.8;
-                            }
+                            this.moveTowards(safePos.x, safePos.y, 0.5);
                         }
                         return;
                     }
                     
-                    // Find best healing target using priority system
                     const bestTarget = this.findBestHealTarget(alliesNeedingHeal);
                     
                     if (!bestTarget) {
@@ -1450,47 +2727,17 @@
                     const target = bestTarget;
                     const distToTarget = this.distanceTo(target);
                     
-                    // Check if enemies are too close
                     const enemiesTooClose = this.hasNearbyEnemies(enemies);
                     
                     if (enemiesTooClose) {
-                        // Enemies nearby - keep distance while healing
                         const safePos = this.findSafePosition([target], enemies);
-                        const dx = safePos.x - this.x;
-                        const dy = safePos.y - this.y;
-                        const dist = Math.hypot(dx, dy);
-                        
-                        if (dist > 30) {
-                            const desiredX = dx / dist;
-                            const desiredY = dy / dist;
-                            const moveSpeed = Math.min(this.maxSpeed * 0.7, dist * 0.1);
-                            
-                            this.velX += (desiredX * moveSpeed - this.velX) * this.turnSpeed;
-                            this.velY += (desiredY * moveSpeed - this.velY) * this.turnSpeed;
-                            this.x += this.velX;
-                            this.y += this.velY;
-                        }
+                        this.moveTowards(safePos.x, safePos.y, 0.7);
                     } else if (distToTarget > this.healRange) {
-                        // Move toward target for optimal healing range
-                        let dx = target.x - this.x, dy = target.y - this.y;
-                        let dist = Math.hypot(dx, dy);
-                        
-                        if (dist > 0) {
-                            const desiredX = dx / dist;
-                            const desiredY = dy / dist;
-                            const moveSpeed = Math.min(this.maxSpeed, distToTarget - this.healRange) * 0.5;
-                            
-                            this.velX += (desiredX * moveSpeed - this.velX) * this.turnSpeed;
-                            this.velY += (desiredY * moveSpeed - this.velY) * this.turnSpeed;
-                            this.x += this.velX;
-                            this.y += this.velY;
-                        }
+                        this.moveTowards(target.x, target.y, 0.5);
                     } else {
-                        // In optimal range - heal and maintain position
                         this.velX *= 0.8;
                         this.velY *= 0.8;
                         
-                        // Heal ally
                         let now = performance.now();
                         if (now - this.lastHeal >= this.healCooldown) {
                             const healAmount = Math.min(this.healPower, target.maxHealth - target.health);
@@ -1498,7 +2745,6 @@
                                 target.health += healAmount;
                                 this.lastHeal = now;
                                 
-                                // Create healing effect
                                 const healEffect = new HealingEffect(
                                     this.x, this.y,
                                     target.x, target.y,
@@ -1519,118 +2765,76 @@
                     return;
                 }
 
-                // MUSKETEER AI - Ranged attacks with bayonet charge
+                // MUSKETEER AI
                 if (this.type === 'musketeer') {
                     if (enemies.length === 0) return;
 
                     let closestEnemy = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
                     let distToEnemy = this.distanceTo(closestEnemy);
                     
-                    // Check if enemy is too close for shooting
                     if (distToEnemy < this.bayonetRange) {
-                        // Enemy too close - CHARGE WITH BAYONET!
                         this.isCharging = true;
+                        this.moveTowards(closestEnemy.x, closestEnemy.y, 1.1);
                         
-                        // Move toward enemy for melee combat
-                        let dx = closestEnemy.x - this.x, dy = closestEnemy.y - this.y;
-                        let dist = Math.hypot(dx, dy);
-                        
-                        if (dist > 0) {
-                            const desiredX = dx / dist;
-                            const desiredY = dy / dist;
-                            const chargeSpeed = this.maxSpeed * 1.1;
-                            
-                            this.velX += (desiredX * chargeSpeed - this.velX) * this.turnSpeed;
-                            this.velY += (desiredY * chargeSpeed - this.velY) * this.turnSpeed;
-                            this.x += this.velX;
-                            this.y += this.velY;
-                        }
-                        
-                        // Check for melee contact
                         let touchDistance = this.radius + closestEnemy.radius + 1;
                         if (distToEnemy <= touchDistance) {
-                            // Bayonet attack
                             let now = performance.now();
                             if (now - this.lastAttack >= this.attackCooldown * 0.5) {
-                                const damageMultiplier = getDirectionalDamageMultiplier(this, closestEnemy);
-                                const actualDamage = Math.floor(this.attackPower * 0.7 * damageMultiplier);
-                                const isCritical = damageMultiplier > 1.5;
-                                
+                                const actualDamage = Math.floor(this.attackPower * 0.7);
                                 closestEnemy.health -= actualDamage;
                                 this.lastAttack = now;
                                 this.totalDamageDealt += actualDamage;
-                                
-                                // Track highest damage
-                                if (actualDamage > highestSingleDamage) {
-                                    highestSingleDamage = actualDamage;
-                                }
                                 
                                 damageTexts.push(new DamageText(
                                     closestEnemy.x,
                                     closestEnemy.y - closestEnemy.radius - 8,
                                     actualDamage,
                                     false,
-                                    isCritical
+                                    false
                                 ));
                                 
                                 attackEffects.push(new AttackEffect(
                                     closestEnemy.x + (Math.random() - 0.5) * 8,
                                     closestEnemy.y + (Math.random() - 0.5) * 8,
                                     this.team,
-                                    isCritical
+                                    false
                                 ));
                             }
                         }
                     } else {
-                        // Enemy at shooting range - STOP CHARGING and shoot
                         this.isCharging = false;
-                        
-                        // Slow down to aim
                         this.velX *= 0.9;
                         this.velY *= 0.9;
                         
-                        // Face the enemy
                         let dx = closestEnemy.x - this.x, dy = closestEnemy.y - this.y;
                         this.facingAngle = Math.atan2(dy, dx);
                         
-                        // Shoot if in range
                         if (distToEnemy <= this.shootingRange) {
                             let now = performance.now();
                             if (now - this.lastShot >= this.attackCooldown) {
-                                // 35% chance to miss
                                 const miss = Math.random() < this.missChance;
                                 
                                 if (!miss) {
-                                    // HIT - calculate damage
-                                    const damageMultiplier = getDirectionalDamageMultiplier(this, closestEnemy);
-                                    const actualDamage = Math.floor(this.attackPower * damageMultiplier);
-                                    const isCritical = damageMultiplier > 1.5;
-                                    
+                                    const actualDamage = Math.floor(this.attackPower);
                                     closestEnemy.health -= actualDamage;
                                     this.totalDamageDealt += actualDamage;
                                     this.lastShot = now;
-                                    
-                                    // Track highest damage
-                                    if (actualDamage > highestSingleDamage) {
-                                        highestSingleDamage = actualDamage;
-                                    }
                                     
                                     damageTexts.push(new DamageText(
                                         closestEnemy.x,
                                         closestEnemy.y - closestEnemy.radius - 8,
                                         actualDamage,
                                         false,
-                                        isCritical
+                                        false
                                     ));
                                     
                                     attackEffects.push(new AttackEffect(
                                         closestEnemy.x + (Math.random() - 0.5) * 8,
                                         closestEnemy.y + (Math.random() - 0.5) * 8,
                                         this.team,
-                                        isCritical
+                                        false
                                     ));
                                 } else {
-                                    // MISS - show miss text
                                     damageTexts.push(new DamageText(
                                         closestEnemy.x,
                                         closestEnemy.y - closestEnemy.radius - 8,
@@ -1641,7 +2845,6 @@
                                     ));
                                 }
                                 
-                                // Create musket effect
                                 musketEffects.push(new MusketEffect(
                                     this.x, this.y,
                                     closestEnemy.x, closestEnemy.y,
@@ -1651,16 +2854,7 @@
                                 this.lastShot = now;
                             }
                         } else {
-                            // Move toward enemy to get in range
-                            if (distToEnemy > 0) {
-                                const desiredX = dx / distToEnemy;
-                                const desiredY = dy / distToEnemy;
-                                
-                                this.velX += (desiredX * this.maxSpeed * 0.7 - this.velX) * this.turnSpeed;
-                                this.velY += (desiredY * this.maxSpeed * 0.7 - this.velY) * this.turnSpeed;
-                                this.x += this.velX;
-                                this.y += this.velY;
-                            }
+                            this.moveTowards(closestEnemy.x, closestEnemy.y, 0.7);
                         }
                     }
                     return;
@@ -1670,56 +2864,34 @@
                 if (enemies.length === 0) return;
 
                 let target = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
-                let dx = target.x - this.x, dy = target.y - this.y;
-                let dist = Math.hypot(dx, dy);
-                let desiredX = dx / dist, desiredY = dy / dist;
                 
-                // EXTREMELY CLOSE COMBAT: Units must be literally touching to attack
+                // Use smart movement with terrain avoidance
+                this.moveTowards(target.x, target.y, 1.0);
+                
                 let touchDistance = this.radius + target.radius + 1;
+                let dist = this.distanceTo(target);
                 
-                if (dist > touchDistance) {
-                    // Move toward enemy at full speed until literally touching
-                    let speed = this.maxSpeed;
-                    this.velX += (desiredX * speed - this.velX) * this.turnSpeed;
-                    this.velY += (desiredY * speed - this.velY) * this.turnSpeed;
-                    this.x += this.velX;
-                    this.y += this.velY;
-                } else {
-                    // Literally touching - maintain contact but don't push through
-                    this.velX *= 0.7;
-                    this.velY *= 0.7;
-                }
-
-                // Attack only when literally touching
                 if (dist <= touchDistance && this.type !== 'healer') {
                     let now = performance.now();
                     if (now - this.lastAttack >= this.attackCooldown) {
-                        const damageMultiplier = getDirectionalDamageMultiplier(this, target);
-                        const actualDamage = Math.floor(this.attackPower * damageMultiplier);
-                        const isCritical = damageMultiplier > 1.5;
-                        
+                        const actualDamage = Math.floor(this.attackPower);
                         target.health -= actualDamage;
                         this.lastAttack = now;
                         this.totalDamageDealt += actualDamage;
-                        
-                        // Track highest damage
-                        if (actualDamage > highestSingleDamage) {
-                            highestSingleDamage = actualDamage;
-                        }
                         
                         damageTexts.push(new DamageText(
                             target.x,
                             target.y - target.radius - 8,
                             actualDamage,
                             false,
-                            isCritical
+                            false
                         ));
                         
                         attackEffects.push(new AttackEffect(
                             target.x + (Math.random() - 0.5) * 8,
                             target.y + (Math.random() - 0.5) * 8,
                             this.team,
-                            isCritical
+                            false
                         ));
                     }
                 }
@@ -1738,10 +2910,7 @@
                 radius: circle.radius
             }));
             
-            // Reset stats
             totalKills = 0;
-            highestSingleDamage = 0;
-            
             showNotification('Unit placements saved! Ready for battle.', 'info');
         }
 
@@ -1753,7 +2922,6 @@
             healingEffects = [];
             damageTexts = [];
             
-            // Restore each unit with full health
             originalCircles.forEach(original => {
                 const circle = new Circle(original.x, original.y, original.team, original.type);
                 circle.health = original.maxHealth;
@@ -1761,23 +2929,16 @@
                 circles.push(circle);
             });
             
-            // Reset game state
             gameRunning = false;
             showGhost = true;
             battleStartTime = 0;
             battleDuration = 0;
-            
-            // Reset stats
             totalKills = 0;
-            highestSingleDamage = 0;
-            
-            // Show header play again button
             playAgainHeaderBtn.style.display = 'none';
-            
             showNotification('Battle reset! Place units or start battle.', 'info');
         }
 
-        // Play Again function (like TABS)
+        // Play Again function
         function playAgain() {
             gameOverModal.style.display = 'none';
             restoreOriginalPlacements();
@@ -1808,22 +2969,49 @@
         }
 
         function handleCanvasClick(x, y) {
-            if (gameRunning) return; // Don't place units during battle
+            if (gameRunning) return;
             
             const radius = baseUnitSize * (Math.min(canvas.width, canvas.height) / 800);
-            const withinBounds = x > mapPadding + radius && 
-                               x < canvas.width - mapPadding - radius &&
-                               y > mapPadding + radius && 
-                               y < canvas.height - mapPadding - radius;
-
-            if (!withinBounds) {
-                showNotification('Cannot place outside battlefield!', 'warning');
+            
+            // Use map-specific placement validation
+            if (!currentMap.canPlaceAt(x, y, radius)) {
+                showNotification('Cannot place here!', 'warning');
                 return;
             }
 
             if (placingMode === "soldier" || placingMode === "tank" || placingMode === "healer" || placingMode === "musketeer") {
                 let type = placingMode;
                 let team = x < canvas.width/2 ? 'red' : 'blue';
+                
+                // Special team assignment for maze map
+                if (currentMap.name === "Stone Maze") {
+                    // Check which starting area the click is in
+                    let inRedStart = false;
+                    let inBlueStart = false;
+                    
+                    for (const feature of terrainFeatures) {
+                        if (feature.type === 'entrance' && feature.team === 'red') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                inRedStart = true;
+                                break;
+                            }
+                        } else if (feature.type === 'exit' && feature.team === 'blue') {
+                            if (x > feature.x && x < feature.x + feature.width &&
+                                y > feature.y && y < feature.y + feature.height) {
+                                inBlueStart = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (inRedStart) team = 'red';
+                    else if (inBlueStart) team = 'blue';
+                    else {
+                        showNotification('Place units in starting areas!', 'warning');
+                        return;
+                    }
+                }
                 
                 let blocked = circles.some(c => Math.hypot(c.x - x, c.y - y) < (c.radius + radius) * 0.8);
                 if (!blocked) {
@@ -1838,6 +3026,68 @@
                 if (circles.length < beforeCount) {
                     showNotification('Unit deleted', 'warning');
                 }
+            }
+        }
+
+        function drawGhost() {
+            if (!showGhost || placingMode === "delete") return;
+            
+            let color, radius = baseUnitSize * (Math.min(canvas.width, canvas.height) / 800);
+            let team = mouseX < canvas.width/2 ? "red" : "blue";
+            let type = "soldier";
+            
+            if (placingMode === "soldier") {
+                type = "soldier";
+                color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
+            } else if (placingMode === "tank") {
+                type = "tank";
+                color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
+                radius = baseUnitSize * 1.3 * (Math.min(canvas.width, canvas.height) / 800);
+            } else if (placingMode === "healer") {
+                type = "healer";
+                color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
+                radius = baseUnitSize * (Math.min(canvas.width, canvas.height) / 800);
+            } else if (placingMode === "musketeer") {
+                type = "musketeer";
+                color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
+                radius = baseUnitSize * 0.9 * (Math.min(canvas.width, canvas.height) / 800);
+            }
+                
+            // Check if position is valid using map-specific validation
+            const canPlace = currentMap.canPlaceAt(mouseX, mouseY, radius);
+            
+            let blocked = circles.some(c => Math.hypot(c.x - mouseX, c.y - mouseY) < (c.radius + radius) * 0.8);
+            
+            if (blocked || !canPlace) {
+                color = "rgba(231, 76, 60, 0.8)";
+            }
+            
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            
+            if (type === "healer") {
+                ctx.beginPath();
+                ctx.moveTo(mouseX - radius/2, mouseY);
+                ctx.lineTo(mouseX + radius/2, mouseY);
+                ctx.moveTo(mouseX, mouseY - radius/2);
+                ctx.lineTo(mouseX, mouseY + radius/2);
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else if (type === "musketeer") {
+                ctx.beginPath();
+                ctx.moveTo(mouseX - radius, mouseY);
+                ctx.lineTo(mouseX + radius, mouseY);
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(mouseX + radius, mouseY, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.fill();
             }
         }
 
@@ -1904,7 +3154,6 @@
                 return;
             }
             
-            // Save original placements before starting battle
             if (!gameRunning && battleStartTime === 0) {
                 saveOriginalPlacements();
             }
@@ -1925,40 +3174,78 @@
 
         document.getElementById("autoPlaceBtn").onclick = () => {
             circles = [];
-            const padding = mapPadding + 30;
             
-            // Place red units on the LEFT
-            for (let i = 0; i < 4; i++) {
-                const x = padding + Math.random() * (canvas.width/2 - padding*1.5);
-                const y = padding + Math.random() * (canvas.height - padding*2);
-                circles.push(new Circle(x, y, 'red', 'soldier'));
+            // Auto-place based on current map
+            if (currentMap.name === "Playground") {
+                const padding = 20 + 30;
+                
+                for (let i = 0; i < 3; i++) {
+                    const x = padding + Math.random() * (canvas.width/2 - padding*1.5);
+                    const y = padding + Math.random() * (canvas.height - padding*2);
+                    circles.push(new Circle(x, y, 'red', 'soldier'));
+                }
+                
+                for (let i = 0; i < 3; i++) {
+                    const x = canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*1.5);
+                    const y = padding + Math.random() * (canvas.height - padding*2);
+                    circles.push(new Circle(x, y, 'blue', 'soldier'));
+                }
+                
+                circles.push(new Circle(padding + 20, canvas.height/2, 'red', 'tank'));
+                circles.push(new Circle(canvas.width - padding - 20, canvas.height/2, 'blue', 'tank'));
+                circles.push(new Circle(padding + 40, canvas.height/3, 'red', 'healer'));
+                circles.push(new Circle(canvas.width - padding - 40, canvas.height*2/3, 'blue', 'healer'));
+                circles.push(new Circle(padding + 60, canvas.height/4, 'red', 'musketeer'));
+                circles.push(new Circle(padding + 80, canvas.height*3/4, 'red', 'musketeer'));
+                circles.push(new Circle(canvas.width - padding - 60, canvas.height/4, 'blue', 'musketeer'));
+                circles.push(new Circle(canvas.width - padding - 80, canvas.height*3/4, 'blue', 'musketeer'));
+            } else if (currentMap.name === "Stone Maze") {
+                // Place units in maze starting areas
+                for (const feature of terrainFeatures) {
+                    if (feature.type === 'entrance' && feature.team === 'red') {
+                        circles.push(new Circle(feature.x + feature.width/2, feature.y + feature.height/2, 'red', 'soldier'));
+                        circles.push(new Circle(feature.x + feature.width/4, feature.y + feature.height/2, 'red', 'healer'));
+                        circles.push(new Circle(feature.x + feature.width*3/4, feature.y + feature.height/2, 'red', 'musketeer'));
+                    } else if (feature.type === 'exit' && feature.team === 'blue') {
+                        circles.push(new Circle(feature.x + feature.width/2, feature.y + feature.height/2, 'blue', 'soldier'));
+                        circles.push(new Circle(feature.x + feature.width/4, feature.y + feature.height/2, 'blue', 'healer'));
+                        circles.push(new Circle(feature.x + feature.width*3/4, feature.y + feature.height/2, 'blue', 'musketeer'));
+                    }
+                }
+            } else {
+                // Generic auto-placement for other maps
+                const padding = 40;
+                for (let i = 0; i < 4; i++) {
+                    let placed = false;
+                    for (let attempt = 0; attempt < 50; attempt++) {
+                        const x = padding + Math.random() * (canvas.width - padding*2);
+                        const y = padding + Math.random() * (canvas.height - padding*2);
+                        const team = x < canvas.width/2 ? 'red' : 'blue';
+                        
+                        if (currentMap.canPlaceAt(x, y, baseUnitSize)) {
+                            circles.push(new Circle(x, y, team, 'soldier'));
+                            placed = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Try to place healers and musketeers
+                for (let i = 0; i < 2; i++) {
+                    for (let attempt = 0; attempt < 50; attempt++) {
+                        const x = canvas.width * (i === 0 ? 0.25 : 0.75);
+                        const y = canvas.height * (0.3 + Math.random() * 0.4);
+                        const team = i === 0 ? 'red' : 'blue';
+                        
+                        if (currentMap.canPlaceAt(x, y, baseUnitSize)) {
+                            circles.push(new Circle(x, y, team, 'healer'));
+                            break;
+                        }
+                    }
+                }
             }
             
-            // Place blue units on the RIGHT
-            for (let i = 0; i < 4; i++) {
-                const x = canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*1.5);
-                const y = padding + Math.random() * (canvas.height - padding*2);
-                circles.push(new Circle(x, y, 'blue', 'soldier'));
-            }
-            
-            // Add tanks
-            circles.push(new Circle(padding + 20, canvas.height/2, 'red', 'tank'));
-            circles.push(new Circle(canvas.width - padding - 20, canvas.height/2, 'blue', 'tank'));
-            
-            // Add healers
-            circles.push(new Circle(padding + 40, canvas.height/3, 'red', 'healer'));
-            circles.push(new Circle(canvas.width - padding - 40, canvas.height*2/3, 'blue', 'healer'));
-            
-            // Add extra healer for testing
-            circles.push(new Circle(padding + 60, canvas.height*2/3, 'red', 'healer'));
-            
-            // Add musketeers
-            circles.push(new Circle(padding + 80, canvas.height/4, 'red', 'musketeer'));
-            circles.push(new Circle(padding + 100, canvas.height*3/4, 'red', 'musketeer'));
-            circles.push(new Circle(canvas.width - padding - 80, canvas.height/4, 'blue', 'musketeer'));
-            circles.push(new Circle(canvas.width - padding - 100, canvas.height*3/4, 'blue', 'musketeer'));
-            
-            showNotification('Auto-placed units including multiple Healers!', 'info');
+            showNotification(`Auto-placed units for ${currentMap.name}!`, 'info');
         };
         
         // Header Play Again button
@@ -1967,7 +3254,11 @@
         };
 
         function gameLoop() {
-            drawMap();
+            // Draw map background
+            if (currentMap && currentMap.drawBackground) {
+                currentMap.drawBackground();
+            }
+            
             drawGhost();
 
             const redTeam = circles.filter(c => c.team === "red");
@@ -2010,7 +3301,6 @@
             redCountEl.textContent = redAlive.length;
             blueCountEl.textContent = blueAlive.length;
             totalCountEl.textContent = circles.length;
-            gameStatusEl.textContent = gameRunning ? "Running" : "Paused";
             
             if (gameRunning) {
                 battleDuration = Math.floor((performance.now() - battleStartTime) / 1000);
@@ -2024,14 +3314,11 @@
                     winnerTextEl.textContent = `${winner === 'red' ? '🔴 Red' : '🔵 Blue'} Team Victory!`;
                     winnerTextEl.className = `winner-text ${winner === 'red' ? 'winner-red' : 'winner-blue'}`;
                     
-                    finalTimeEl.textContent = battleDuration;
-                    remainingUnitsEl.textContent = winner === 'red' ? redAlive.length : blueAlive.length;
-                    totalKillsEl.textContent = totalKills;
-                    highestDamageEl.textContent = highestSingleDamage;
+                    document.getElementById("finalTime").textContent = battleDuration;
+                    document.getElementById("remainingUnits").textContent = winner === 'red' ? redAlive.length : blueAlive.length;
+                    document.getElementById("totalKills").textContent = totalKills;
                     
                     gameOverModal.style.display = 'flex';
-                    
-                    // Show play again button in header
                     playAgainHeaderBtn.style.display = 'flex';
                     
                     showNotification(`${winner === 'red' ? 'Red' : 'Blue'} team wins! Click Play Again to restart.`, 'info');
@@ -2042,7 +3329,7 @@
         }
 
         // Initialize the game
-        showNotification('Welcome to Neon Battle Simulator with Musketeers! Place units then click Start.', 'info');
+        showNotification('Welcome to Neon Battle Simulator with Terrain System! Try different maps.', 'info');
         resizeCanvas();
         gameLoop();
     </script>
