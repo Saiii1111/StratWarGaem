@@ -2024,39 +2024,58 @@
             circles = [];
             const padding = mapPadding + 30;
             
-            // Place red units on the LEFT
-            for (let i = 0; i < 3; i++) {
-                const x = padding + Math.random() * (canvas.width/2 - padding*1.5);
+            // Clear all units first
+            circles = [];
+            
+            // Place red units on the LEFT - VARIED UNITS
+            // Soldiers
+            for (let i = 0; i < 4; i++) {
+                const x = padding + Math.random() * (canvas.width/2 - padding*2);
                 const y = padding + Math.random() * (canvas.height - padding*2);
                 circles.push(new Circle(x, y, 'red', 'soldier'));
             }
             
-            // Place blue units on the RIGHT
-            for (let i = 0; i < 3; i++) {
-                const x = canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*1.5);
+            // Tanks
+            circles.push(new Circle(padding + 40, canvas.height/2 - 60, 'red', 'tank'));
+            circles.push(new Circle(padding + 80, canvas.height/2 + 60, 'red', 'tank'));
+            
+            // Healers
+            circles.push(new Circle(padding + 60, canvas.height/3, 'red', 'healer'));
+            circles.push(new Circle(padding + 100, canvas.height*2/3, 'red', 'healer'));
+            
+            // Musketeers
+            circles.push(new Circle(padding + 120, canvas.height/4, 'red', 'musketeer'));
+            circles.push(new Circle(padding + 140, canvas.height*3/4, 'red', 'musketeer'));
+            
+            // Cavalry with INSTANT FIRST CHARGE!
+            circles.push(new Circle(padding + 160, canvas.height/5, 'red', 'cavalry'));
+            circles.push(new Circle(padding + 180, canvas.height*4/5, 'red', 'cavalry'));
+            
+            // Place blue units on the RIGHT - VARIED UNITS
+            // Soldiers
+            for (let i = 0; i < 4; i++) {
+                const x = canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*2);
                 const y = padding + Math.random() * (canvas.height - padding*2);
                 circles.push(new Circle(x, y, 'blue', 'soldier'));
             }
             
-            // Add tanks
-            circles.push(new Circle(padding + 20, canvas.height/2, 'red', 'tank'));
-            circles.push(new Circle(canvas.width - padding - 20, canvas.height/2, 'blue', 'tank'));
+            // Tanks
+            circles.push(new Circle(canvas.width - padding - 40, canvas.height/2 - 60, 'blue', 'tank'));
+            circles.push(new Circle(canvas.width - padding - 80, canvas.height/2 + 60, 'blue', 'tank'));
             
-            // Add healers
-            circles.push(new Circle(padding + 40, canvas.height/3, 'red', 'healer'));
-            circles.push(new Circle(canvas.width - padding - 40, canvas.height*2/3, 'blue', 'healer'));
+            // Healers
+            circles.push(new Circle(canvas.width - padding - 60, canvas.height/3, 'blue', 'healer'));
+            circles.push(new Circle(canvas.width - padding - 100, canvas.height*2/3, 'blue', 'healer'));
             
-            // Add musketeers
-            circles.push(new Circle(padding + 60, canvas.height/4, 'red', 'musketeer'));
-            circles.push(new Circle(padding + 80, canvas.height*3/4, 'red', 'musketeer'));
-            circles.push(new Circle(canvas.width - padding - 60, canvas.height/4, 'blue', 'musketeer'));
-            circles.push(new Circle(canvas.width - padding - 80, canvas.height*3/4, 'blue', 'musketeer'));
+            // Musketeers
+            circles.push(new Circle(canvas.width - padding - 120, canvas.height/4, 'blue', 'musketeer'));
+            circles.push(new Circle(canvas.width - padding - 140, canvas.height*3/4, 'blue', 'musketeer'));
             
-            // Add cavalry with INSTANT FIRST CHARGE!
-            circles.push(new Circle(padding + 100, canvas.height/5, 'red', 'cavalry'));
-            circles.push(new Circle(canvas.width - padding - 100, canvas.height*4/5, 'blue', 'cavalry'));
+            // Cavalry with INSTANT FIRST CHARGE!
+            circles.push(new Circle(canvas.width - padding - 160, canvas.height/5, 'blue', 'cavalry'));
+            circles.push(new Circle(canvas.width - padding - 180, canvas.height*4/5, 'blue', 'cavalry'));
             
-            showNotification('Auto-placed units including Musketeers & Cavalry (with INSTANT FIRST CHARGE!)!', 'info');
+            showNotification('Auto-placed balanced armies with ALL unit types! (Cavalry has INSTANT FIRST CHARGE!)', 'info');
         };
         
         // Header Play Again button
