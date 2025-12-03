@@ -1083,7 +1083,7 @@
                     this.baseSpeed = 1.2 * sizeMultiplier; // Normal walking speed
                     this.currentSpeed = this.baseSpeed;
                     
-                    // Charge mechanics
+                    // Charge mechanics - INSTANT FIRST CHARGE!
                     this.isCharging = false;
                     this.chargeSpeed = this.maxSpeed;
                     this.chargeDamageMultiplier = 1.0;
@@ -1092,9 +1092,13 @@
                     this.chargeDuration = 2000; // Charge lasts 2 seconds
                     this.chargeStartTime = 0;
                     this.chargeTarget = null;
-                    this.minChargeDistance = 100; // Need space to build up speed
+                    this.minChargeDistance = 50; // Reduced for instant first charge
                     this.currentVelocity = 0;
                     this.chargeBoost = 0;
+                    this.hasUsedFirstCharge = false; // Track if first charge was used
+                    
+                    // INSTANT FIRST CHARGE: Set lastCharge to way in the past so charge is available immediately
+                    this.lastCharge = performance.now() - this.chargeCooldown - 10000;
                 }
                 
                 this.lastAttack = 0;
@@ -1260,12 +1264,21 @@
                             ctx.lineTo(-this.radius * 2 - i * 15, this.radius * 0.5 + i * 2);
                             ctx.stroke();
                         }
+                        
+                        // First charge indicator
+                        if (!this.hasUsedFirstCharge) {
+                            ctx.beginPath();
+                            ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2);
+                            ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
+                            ctx.lineWidth = 3;
+                            ctx.stroke();
+                        }
                     }
                     
                     ctx.restore();
                     
-                    // Charge cooldown indicator
-                    if (!this.isCharging) {
+                    // Charge cooldown indicator (only show after first charge is used)
+                    if (!this.isCharging && this.hasUsedFirstCharge) {
                         const now = performance.now();
                         const chargeProgress = Math.min(1, (now - this.lastCharge) / this.chargeCooldown);
                         
@@ -1340,7 +1353,7 @@
 
                 this.applySeparation([...enemies, ...allies]);
 
-                // CAVALRY AI - Charge mechanic with speed-based damage
+                // CAVALRY AI - Charge mechanic with INSTANT FIRST CHARGE
                 if (this.type === 'cavalry') {
                     if (enemies.length === 0) return;
 
@@ -1365,7 +1378,13 @@
                         
                         // Initial charge boost
                         this.chargeBoost = 1.0;
-                        showNotification(`${this.team === 'red' ? '🔴 Red' : '🔵 Blue'} Cavalry is charging!`, 'info');
+                        
+                        // Show special notification for first charge
+                        if (!this.hasUsedFirstCharge) {
+                            showNotification(`${this.team === 'red' ? '🔴 Red' : '🔵 Blue'} Cavalry FIRST CHARGE!`, 'info');
+                        } else {
+                            showNotification(`${this.team === 'red' ? '🔴 Red' : '🔵 Blue'} Cavalry is charging!`, 'info');
+                        }
                     }
                     
                     // If charging, handle charge logic
@@ -1377,6 +1396,10 @@
                             this.isCharging = false;
                             this.chargeBoost = 0;
                             this.chargeTarget = null;
+                            // Mark first charge as used
+                            if (!this.hasUsedFirstCharge) {
+                                this.hasUsedFirstCharge = true;
+                            }
                         } else {
                             // Build up charge speed
                             const chargeProgress = chargeElapsed / this.chargeDuration;
@@ -1416,21 +1439,25 @@
                                     const actualDamage = Math.floor(this.attackPower * damageMultiplier);
                                     const isCritical = damageMultiplier > 1.5 || speedDamageMultiplier > 1.3;
                                     
-                                    closestEnemy.health -= actualDamage;
+                                    // FIRST CHARGE BONUS: +50% more damage!
+                                    const finalDamage = !this.hasUsedFirstCharge ? 
+                                        Math.floor(actualDamage * 1.5) : actualDamage;
+                                    
+                                    closestEnemy.health -= finalDamage;
                                     this.lastAttack = now;
-                                    this.totalDamageDealt += actualDamage;
+                                    this.totalDamageDealt += finalDamage;
                                     
                                     // Track highest damage
-                                    if (actualDamage > highestSingleDamage) {
-                                        highestSingleDamage = actualDamage;
+                                    if (finalDamage > highestSingleDamage) {
+                                        highestSingleDamage = finalDamage;
                                     }
                                     
                                     damageTexts.push(new DamageText(
                                         closestEnemy.x,
                                         closestEnemy.y - closestEnemy.radius - 8,
-                                        actualDamage,
+                                        finalDamage,
                                         false,
-                                        isCritical
+                                        isCritical || !this.hasUsedFirstCharge
                                     ));
                                     
                                     // Create special charge impact effect
@@ -1440,6 +1467,12 @@
                                         this.team,
                                         true
                                     ));
+                                    
+                                    // Mark first charge as used
+                                    if (!this.hasUsedFirstCharge) {
+                                        this.hasUsedFirstCharge = true;
+                                        showNotification(`${this.team === 'red' ? '🔴 Red' : '🔵 Blue'} Cavalry FIRST CHARGE HIT! +50% damage!`, 'info');
+                                    }
                                     
                                     // End charge after impact
                                     this.isCharging = false;
@@ -1787,7 +1820,8 @@
                 type: circle.type,
                 health: circle.maxHealth,
                 maxHealth: circle.maxHealth,
-                radius: circle.radius
+                radius: circle.radius,
+                hasUsedFirstCharge: circle.type === 'cavalry' ? circle.hasUsedFirstCharge : undefined
             }));
             
             // Reset stats
@@ -1810,6 +1844,11 @@
                 const circle = new Circle(original.x, original.y, original.team, original.type);
                 circle.health = original.maxHealth;
                 circle.maxHealth = original.maxHealth;
+                // Restore first charge status for cavalry
+                if (original.type === 'cavalry' && original.hasUsedFirstCharge === false) {
+                    circle.hasUsedFirstCharge = false;
+                    circle.lastCharge = performance.now() - circle.chargeCooldown - 10000; // Reset to instant charge
+                }
                 circles.push(circle);
             });
             
@@ -1880,7 +1919,7 @@
                 let blocked = circles.some(c => Math.hypot(c.x - x, c.y - y) < (c.radius + radius) * 0.8);
                 if (!blocked) {
                     circles.push(new Circle(x, y, team, type));
-                    showNotification(`Placed ${type} on ${team} team`, 'info');
+                    showNotification(`Placed ${type} on ${team} team${type === 'cavalry' ? ' - READY TO CHARGE!' : ''}`, 'info');
                 } else {
                     showNotification('Space occupied', 'warning');
                 }
@@ -1946,7 +1985,7 @@
         
         document.getElementById("placeCavalry").onclick = () => {
             placingMode = "cavalry";
-            showNotification("Placing: Cavalry (Charges every 25s! Speed-based damage)", 'info');
+            showNotification("Placing: Cavalry (INSTANT FIRST CHARGE! +50% damage bonus!)", 'info');
             showGhost = true;
         };
         
@@ -2013,11 +2052,11 @@
             circles.push(new Circle(canvas.width - padding - 60, canvas.height/4, 'blue', 'musketeer'));
             circles.push(new Circle(canvas.width - padding - 80, canvas.height*3/4, 'blue', 'musketeer'));
             
-            // Add cavalry
+            // Add cavalry with INSTANT FIRST CHARGE!
             circles.push(new Circle(padding + 100, canvas.height/5, 'red', 'cavalry'));
             circles.push(new Circle(canvas.width - padding - 100, canvas.height*4/5, 'blue', 'cavalry'));
             
-            showNotification('Auto-placed units including Musketeers & Cavalry!', 'info');
+            showNotification('Auto-placed units including Musketeers & Cavalry (with INSTANT FIRST CHARGE!)!', 'info');
         };
         
         // Header Play Again button
@@ -2101,7 +2140,7 @@
         }
 
         // Initialize the game
-        showNotification('Welcome to Neon Battle Simulator with Musketeers & Cavalry! Place units then click Start.', 'info');
+        showNotification('Welcome to Neon Battle Simulator with Musketeers & Cavalry! Place units then click Start. Cavalry has INSTANT FIRST CHARGE!', 'info');
         resizeCanvas();
         gameLoop();
     </script>
