@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Battle Simulator - Complete Edition</title>
+    <title>Neon Battle Simulator</title>
     <style>
         * { 
             margin: 0; 
@@ -112,8 +112,12 @@
         .special-btn:hover { background: #5dade2; }
         .cavalry-btn { background: #8e44ad; }
         .cavalry-btn:hover { background: #9b59b6; }
-        .cannon-btn { background: #d35400; }
-        .cannon-btn:hover { background: #e67e22; }
+        .cannon-btn { background: #7f8c8d; }
+        .cannon-btn:hover { background: #95a5a6; }
+        .cannon-btn.active {
+            background: #34495e;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+        }
         
         .control-btn { background: #27ae60; }
         .control-btn:hover { background: #2ecc71; }
@@ -132,7 +136,6 @@
         .play-again-header-btn { background: #1abc9c; }
         .play-again-header-btn:hover { background: #48c9b0; }
 
-        /* Rest of CSS remains the same as before... */
         .main-container {
             display: flex;
             flex: 1;
@@ -358,7 +361,7 @@
             100% { transform: translateY(-30px) scale(1.2); opacity: 0; }
         }
 
-        /* Add explosion animation */
+        /* Explosion animation */
         @keyframes explosion {
             0% { transform: scale(0.1); opacity: 1; }
             50% { transform: scale(1.2); opacity: 0.8; }
@@ -442,7 +445,7 @@
             .unit-btn:active{ background: #ec7063; }
             .special-btn:active{ background: #5dade2; }
             .cavalry-btn:active{ background: #9b59b6; }
-            .cannon-btn:active{ background: #e67e22; }
+            .cannon-btn:active{ background: #95a5a6; }
             .control-btn:active{ background: #2ecc71; }
             .control-btn.pause:active{ background: #f4d03f; }
             .danger-btn:active{ background: #eb984e; }
@@ -470,17 +473,17 @@
         <h1>Neon Battle Simulator</h1>
         
         <div class="header-controls">
-            <!-- Unit Selection Buttons - SEPARATED GROUP -->
+            <!-- Unit Selection Buttons -->
             <div class="unit-controls">
                 <button class="unit-btn active" id="placeSoldier" data-type="soldier">👤 Soldier</button>
                 <button class="special-btn" id="placeTank" data-type="tank">🛡️ Tank</button>
                 <button class="special-btn" id="placeMusketeer" data-type="musketeer">🎯 Musketeer</button>
                 <button class="special-btn" id="placeHealer" data-type="healer">❤️ Healer</button>
                 <button class="cavalry-btn" id="placeCavalry" data-type="cavalry">🐎 Cavalry</button>
-                <button class="cannon-btn" id="placeCannon" data-type="cannon">💣 Cannon</button>
+                <button class="cannon-btn" id="placeCannon" data-type="cannon">💥 Cannon</button>
             </div>
             
-            <!-- Game Control Buttons - SEPARATED GROUP -->
+            <!-- Game Control Buttons -->
             <div class="game-controls">
                 <button class="danger-btn" id="deleteTool">🗑️ Delete</button>
                 <button class="delete-all-btn" id="deleteAllBtn">🔥 Delete All</button>
@@ -596,7 +599,6 @@
 
         // CANNON SPECIFIC
         let cannonEffects = [];
-        let reloadIndicators = [];
 
         const mapPadding = 20;
         const MUSKET_RANGE = 150;
@@ -605,32 +607,38 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // NEW: Explosion Effect Class
+        // NEW: Better Explosion Effect
         class ExplosionEffect {
-            constructor(x, y, radius, team) {
+            constructor(x, y, maxRadius, team, intensity) {
                 this.x = x;
                 this.y = y;
-                this.maxRadius = radius;
+                this.maxRadius = maxRadius;
                 this.currentRadius = 0;
                 this.team = team;
-                this.duration = 800;
+                this.duration = 1000;
                 this.startTime = performance.now();
                 this.particles = [];
+                this.intensity = intensity || 1;
                 
-                // Create particles for realistic explosion
-                for (let i = 0; i < 25; i++) {
+                // Create particles based on intensity
+                const particleCount = Math.floor(20 * intensity);
+                for (let i = 0; i < particleCount; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const speed = 2 + Math.random() * 4;
+                    const speed = 1 + Math.random() * 3;
+                    const life = 0.7 + Math.random() * 0.3;
+                    const size = 1 + Math.random() * 3;
+                    
                     this.particles.push({
                         x: this.x,
                         y: this.y,
                         vx: Math.cos(angle) * speed,
                         vy: Math.sin(angle) * speed,
-                        life: 1.0,
-                        size: 2 + Math.random() * 4,
+                        life: life,
+                        maxLife: life,
+                        size: size,
                         color: team === 'red' ? 
-                            `rgba(${255}, ${100 + Math.random() * 100}, ${50}, 1)` :
-                            `rgba(${50}, ${150 + Math.random() * 100}, ${255}, 1)`
+                            `rgba(${255}, ${150 + Math.random() * 105}, ${50}, 1)` :
+                            `rgba(${50}, ${150 + Math.random() * 105}, ${255}, 1)`
                     });
                 }
             }
@@ -639,16 +647,20 @@
                 const elapsed = performance.now() - this.startTime;
                 const progress = elapsed / this.duration;
                 
-                // Update main explosion radius
-                this.currentRadius = this.maxRadius * Math.min(1, progress * 1.5);
+                // Update explosion radius
+                if (progress < 0.5) {
+                    this.currentRadius = this.maxRadius * (progress * 2);
+                } else {
+                    this.currentRadius = this.maxRadius * (1 - ((progress - 0.5) * 2));
+                }
                 
                 // Update particles
                 for (let particle of this.particles) {
                     particle.x += particle.vx;
                     particle.y += particle.vy;
-                    particle.vx *= 0.95;
-                    particle.vy *= 0.95;
-                    particle.life -= 0.02;
+                    particle.vx *= 0.97;
+                    particle.vy *= 0.97;
+                    particle.life -= 0.01;
                 }
                 
                 return progress < 1;
@@ -657,134 +669,172 @@
             draw() {
                 const elapsed = performance.now() - this.startTime;
                 const progress = elapsed / this.duration;
-                const alpha = 1 - progress;
                 
-                // Draw main explosion
-                const gradient = ctx.createRadialGradient(
-                    this.x, this.y, 0,
-                    this.x, this.y, this.currentRadius
-                );
-                
-                if (this.team === 'red') {
-                    gradient.addColorStop(0, `rgba(231, 76, 60, ${alpha * 0.8})`);
-                    gradient.addColorStop(0.5, `rgba(230, 126, 34, ${alpha * 0.5})`);
-                    gradient.addColorStop(1, `rgba(211, 84, 0, ${alpha * 0.2})`);
-                } else {
-                    gradient.addColorStop(0, `rgba(52, 152, 219, ${alpha * 0.8})`);
-                    gradient.addColorStop(0.5, `rgba(41, 128, 185, ${alpha * 0.5})`);
-                    gradient.addColorStop(1, `rgba(21, 67, 96, ${alpha * 0.2})`);
+                // Draw main explosion (only during first half)
+                if (progress < 0.5) {
+                    const alpha = 1 - (progress * 2);
+                    const gradient = ctx.createRadialGradient(
+                        this.x, this.y, 0,
+                        this.x, this.y, this.currentRadius
+                    );
+                    
+                    if (this.team === 'red') {
+                        gradient.addColorStop(0, `rgba(255, 200, 100, ${alpha * 0.8})`);
+                        gradient.addColorStop(0.7, `rgba(255, 100, 50, ${alpha * 0.4})`);
+                        gradient.addColorStop(1, `rgba(255, 50, 0, ${alpha * 0.1})`);
+                    } else {
+                        gradient.addColorStop(0, `rgba(100, 200, 255, ${alpha * 0.8})`);
+                        gradient.addColorStop(0.7, `rgba(50, 150, 255, ${alpha * 0.4})`);
+                        gradient.addColorStop(1, `rgba(0, 100, 200, ${alpha * 0.1})`);
+                    }
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
                 }
-                
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI * 2);
-                ctx.fillStyle = gradient;
-                ctx.fill();
                 
                 // Draw particles
                 for (let particle of this.particles) {
                     if (particle.life > 0) {
+                        const particleAlpha = particle.life / particle.maxLife;
                         ctx.beginPath();
-                        ctx.arc(particle.x, particle.y, particle.size * particle.life, 0, Math.PI * 2);
-                        ctx.fillStyle = particle.color.replace('1)', `${particle.life})`);
+                        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        ctx.fillStyle = particle.color.replace('1)', `${particleAlpha})`);
                         ctx.fill();
                     }
                 }
                 
-                // Draw shockwave
+                // Draw shockwave during explosion
                 if (progress < 0.3) {
                     const shockwaveRadius = this.currentRadius * 1.5;
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, shockwaveRadius, 0, Math.PI * 2);
                     ctx.strokeStyle = this.team === 'red' ? 
-                        `rgba(231, 76, 60, ${0.3 * (1 - progress * 3)})` :
-                        `rgba(52, 152, 219, ${0.3 * (1 - progress * 3)})`;
-                    ctx.lineWidth = 3;
+                        `rgba(255, 200, 100, ${0.3 * (1 - progress * 3.3)})` :
+                        `rgba(100, 200, 255, ${0.3 * (1 - progress * 3.3)})`;
+                    ctx.lineWidth = 2;
                     ctx.stroke();
                 }
             }
         }
 
-        // NEW: Canister Shot Effect
-        class CanisterEffect {
-            constructor(x, y, targetX, targetY, team) {
+        // NEW: Cannon Shot Effect with pellets
+        class CannonShotEffect {
+            constructor(x, y, angle, team, range) {
                 this.x = x;
                 this.y = y;
-                this.targetX = targetX;
-                this.targetY = targetY;
+                this.angle = angle;
                 this.team = team;
-                this.progress = 0;
-                this.speed = 0.15;
-                this.life = 1.0;
+                this.range = range;
                 this.pellets = [];
+                this.startTime = performance.now();
+                this.duration = 800;
                 
-                // Create multiple pellets for canister shot
-                const pelletCount = 15;
+                // Create shotgun-like pellet spread (45 degree cone)
+                const pelletCount = 20;
+                const spreadAngle = Math.PI / 4; // 45 degree spread
+                
                 for (let i = 0; i < pelletCount; i++) {
-                    const spread = Math.PI / 6; // 30 degree spread
-                    const angle = Math.atan2(targetY - y, targetX - x) + (Math.random() - 0.5) * spread;
-                    const pelletSpeed = 0.12 + Math.random() * 0.08;
+                    const pelletAngle = angle + (Math.random() - 0.5) * spreadAngle;
+                    const distance = range * (0.7 + Math.random() * 0.3); // Some variance in range
+                    const speed = distance / (this.duration * 0.8); // Reach target in 80% of duration
                     
                     this.pellets.push({
                         x: this.x,
                         y: this.y,
-                        angle: angle,
-                        speed: pelletSpeed,
+                        angle: pelletAngle,
+                        speed: speed,
                         distance: 0,
-                        maxDistance: Math.hypot(targetX - x, targetY - y) * (0.8 + Math.random() * 0.4),
-                        life: 1.0
+                        maxDistance: distance,
+                        life: 1.0,
+                        hit: false
                     });
                 }
             }
             
             update() {
-                this.progress += this.speed;
-                this.life -= 0.01;
+                const elapsed = performance.now() - this.startTime;
+                const progress = elapsed / this.duration;
                 
                 // Update pellets
                 for (let pellet of this.pellets) {
-                    if (pellet.distance < pellet.maxDistance) {
-                        pellet.distance += pellet.speed * 20;
+                    if (!pellet.hit && pellet.distance < pellet.maxDistance) {
+                        pellet.distance += pellet.speed;
                         pellet.x = this.x + Math.cos(pellet.angle) * pellet.distance;
                         pellet.y = this.y + Math.sin(pellet.angle) * pellet.distance;
-                        pellet.life = Math.max(0, 1 - (pellet.distance / pellet.maxDistance));
+                        pellet.life = 1 - (pellet.distance / pellet.maxDistance);
+                        
+                        // Check for hit (simplified - actual damage calculation is in Circle class)
+                        if (pellet.distance >= pellet.maxDistance * 0.95) {
+                            pellet.hit = true;
+                        }
+                    } else if (pellet.hit) {
+                        pellet.life -= 0.05;
                     }
                 }
                 
-                return this.progress <= 1.0 && this.life > 0;
+                return progress < 1;
             }
             
             draw() {
                 // Draw pellets
                 for (let pellet of this.pellets) {
                     if (pellet.life > 0) {
+                        const size = pellet.hit ? 4 : 2;
                         ctx.beginPath();
-                        ctx.arc(pellet.x, pellet.y, 2, 0, Math.PI * 2);
-                        ctx.fillStyle = this.team === 'red' ? 
-                            `rgba(231, 76, 60, ${pellet.life})` :
-                            `rgba(52, 152, 219, ${pellet.life})`;
+                        ctx.arc(pellet.x, pellet.y, size, 0, Math.PI * 2);
+                        
+                        if (pellet.hit) {
+                            // Hit effect - small explosion
+                            const hitAlpha = pellet.life;
+                            const gradient = ctx.createRadialGradient(
+                                pellet.x, pellet.y, 0,
+                                pellet.x, pellet.y, 6
+                            );
+                            gradient.addColorStop(0, this.team === 'red' ? 
+                                `rgba(255, 200, 100, ${hitAlpha})` :
+                                `rgba(100, 200, 255, ${hitAlpha})`);
+                            gradient.addColorStop(1, this.team === 'red' ? 
+                                `rgba(255, 100, 50, 0)` :
+                                `rgba(50, 150, 255, 0)`);
+                            ctx.fillStyle = gradient;
+                        } else {
+                            // Flying pellet
+                            ctx.fillStyle = this.team === 'red' ? 
+                                `rgba(255, 255, 200, ${pellet.life})` :
+                                `rgba(200, 230, 255, ${pellet.life})`;
+                        }
+                        
                         ctx.fill();
                         
-                        // Draw trail
-                        ctx.beginPath();
-                        ctx.moveTo(this.x, this.y);
-                        ctx.lineTo(pellet.x, pellet.y);
-                        ctx.strokeStyle = this.team === 'red' ? 
-                            `rgba(231, 76, 60, ${pellet.life * 0.3})` :
-                            `rgba(52, 152, 219, ${pellet.life * 0.3})`;
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
+                        // Draw trail for flying pellets
+                        if (!pellet.hit && pellet.distance > 10) {
+                            ctx.beginPath();
+                            ctx.moveTo(this.x + Math.cos(pellet.angle) * (pellet.distance - 10), 
+                                      this.y + Math.sin(pellet.angle) * (pellet.distance - 10));
+                            ctx.lineTo(pellet.x, pellet.y);
+                            ctx.strokeStyle = this.team === 'red' ? 
+                                `rgba(255, 200, 100, ${pellet.life * 0.3})` :
+                                `rgba(100, 200, 255, ${pellet.life * 0.3})`;
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
                     }
                 }
                 
                 // Draw muzzle flash
-                if (this.progress < 0.1) {
-                    const flashSize = 15 * (1 - this.progress * 10);
+                if (performance.now() - this.startTime < 100) {
+                    const flashProgress = (performance.now() - this.startTime) / 100;
+                    const flashSize = 25 * (1 - flashProgress);
+                    
                     const gradient = ctx.createRadialGradient(
                         this.x, this.y, 0,
                         this.x, this.y, flashSize
                     );
                     gradient.addColorStop(0, 'rgba(255, 255, 200, 0.9)');
-                    gradient.addColorStop(1, 'rgba(255, 200, 100, 0)');
+                    gradient.addColorStop(0.7, 'rgba(255, 200, 100, 0.5)');
+                    gradient.addColorStop(1, 'rgba(255, 150, 50, 0)');
                     
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, flashSize, 0, Math.PI * 2);
@@ -875,7 +925,7 @@
             else if (placingMode === "healer") { type = "healer"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; }
             else if (placingMode === "musketeer") { type = "musketeer"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; radius = baseUnitSize * 0.9 * (Math.min(canvas.width, canvas.height) / 800); }
             else if (placingMode === "cavalry") { type = "cavalry"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; radius = baseUnitSize * 1.1 * (Math.min(canvas.width, canvas.height) / 800); }
-            else if (placingMode === "cannon") { type = "cannon"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; radius = baseUnitSize * 1.5 * (Math.min(canvas.width, canvas.height) / 800); }
+            else if (placingMode === "cannon") { type = "cannon"; color = team === "red" ? "rgba(140, 60, 40, 0.6)" : "rgba(40, 100, 140, 0.6)"; radius = baseUnitSize * 1.6 * (Math.min(canvas.width, canvas.height) / 800); }
                 
             const withinBounds = mouseX > mapPadding + radius && mouseX < canvas.width - mapPadding - radius && mouseY > mapPadding + radius && mouseY < canvas.height - mapPadding - radius;
             let blocked = circles.some(c => Math.hypot(c.x - mouseX, c.y - mouseY) < (c.radius + radius) * 0.8);
@@ -913,24 +963,33 @@
                 ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
                 ctx.fill();
             } else if (type === "cannon") {
-                // Draw cannon barrel
+                // Draw cannon ghost
                 ctx.save();
                 ctx.translate(mouseX, mouseY);
-                ctx.rotate(Math.PI / 4); // 45 degree angle
-                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-                ctx.fillRect(-radius * 0.8, -radius * 0.2, radius * 1.6, radius * 0.4);
-                ctx.restore();
+                
+                // Draw cannon body (dark metal)
+                ctx.fillStyle = "rgba(60, 60, 60, 0.8)";
+                ctx.fillRect(-radius * 0.8, -radius * 0.4, radius * 1.6, radius * 0.8);
                 
                 // Draw wheels
+                ctx.fillStyle = "rgba(40, 40, 40, 0.8)";
                 ctx.beginPath();
-                ctx.arc(mouseX - radius * 0.6, mouseY + radius * 0.5, radius * 0.2, 0, Math.PI * 2);
-                ctx.fillStyle = "rgba(200, 200, 200, 0.8)";
+                ctx.arc(-radius * 0.6, radius * 0.3, radius * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(radius * 0.6, radius * 0.3, radius * 0.2, 0, Math.PI * 2);
                 ctx.fill();
                 
-                ctx.beginPath();
-                ctx.arc(mouseX + radius * 0.6, mouseY + radius * 0.5, radius * 0.2, 0, Math.PI * 2);
-                ctx.fillStyle = "rgba(200, 200, 200, 0.8)";
-                ctx.fill();
+                // Draw barrel
+                ctx.rotate(Math.PI / 4);
+                ctx.fillStyle = "rgba(80, 80, 80, 0.8)";
+                ctx.fillRect(-radius * 1.5, -radius * 0.15, radius * 3, radius * 0.3);
+                
+                // Draw muzzle
+                ctx.fillStyle = "rgba(100, 100, 100, 0.8)";
+                ctx.fillRect(radius * 1.5, -radius * 0.2, radius * 0.3, radius * 0.4);
+                
+                ctx.restore();
             }
         }
 
@@ -1055,17 +1114,25 @@
                     this.currentVelocity = 0; this.chargeBoost = 0; this.hasUsedFirstCharge = false;
                     this.lastCharge = performance.now() - this.chargeCooldown - 10000;
                 } else if (type === 'cannon') {
-                    this.radius = baseUnitSize * 1.5 * sizeMultiplier; // Biggest unit
-                    this.health = 150; this.maxHealth = 150; // Medium health
+                    // IMPROVED CANNON STATS
+                    this.radius = baseUnitSize * 1.6 * sizeMultiplier; // Bigger
+                    this.health = 180; this.maxHealth = 180; // More health
                     this.attackPower = 0; // Not used directly
-                    this.attackCooldown = 35000; // 35 SECOND RELOAD AS REQUESTED!
-                    this.maxSpeed = 0.3 * sizeMultiplier; // Barely moves
-                    this.turnSpeed = 0.05; // Very slow turning
-                    this.cannonRange = 100 * sizeMultiplier; // SHORT RANGE - canister shot!
+                    this.attackCooldown = 35000; // 35 SECOND RELOAD
+                    this.maxSpeed = 0.2 * sizeMultiplier; // Slower movement
+                    this.turnSpeed = 0.04; // Slower turning
+                    
+                    // 65% OF MAP RANGE AS REQUESTED!
+                    this.cannonRange = (canvas.width * 0.65) * sizeMultiplier;
                     this.lastShot = 0;
                     this.isLoaded = false;
-                    this.loadProgress = 0;
-                    this.barrelAngle = Math.PI / 4; // 45 degree default angle
+                    this.barrelAngle = Math.PI / 4; // 45 degree default
+                    
+                    // Shotgun properties
+                    this.pelletCount = 20;
+                    this.spreadAngle = Math.PI / 4; // 45 degree spread cone
+                    this.maxDamage = 120; // MAX damage at point blank
+                    this.minDamage = 20; // MIN damage at max range
                 }
                 
                 this.lastAttack = 0; this.lastHeal = 0; this.velX = 0; this.velY = 0;
@@ -1075,95 +1142,88 @@
 
             draw() {
                 if (Math.abs(this.velX) > 0.1 || Math.abs(this.velY) > 0.1) this.facingAngle = Math.atan2(this.velY, this.velX);
-                const gradient = ctx.createRadialGradient(this.x - 3, this.y - 3, 3, this.x, this.y, this.radius);
                 
-                if (this.team === 'red') {
-                    if (this.type === 'tank') { gradient.addColorStop(0, '#ff7979'); gradient.addColorStop(1, '#c0392b'); }
-                    else if (this.type === 'healer') { gradient.addColorStop(0, '#f8c471'); gradient.addColorStop(1, '#e67e22'); }
-                    else if (this.type === 'musketeer') { gradient.addColorStop(0, '#ff9f80'); gradient.addColorStop(1, '#d35400'); }
-                    else if (this.type === 'cavalry') { gradient.addColorStop(0, '#e74c3c'); gradient.addColorStop(1, '#c0392b'); }
-                    else if (this.type === 'cannon') { gradient.addColorStop(0, '#ff8c66'); gradient.addColorStop(1, '#b33900'); }
-                    else { gradient.addColorStop(0, '#ff6b6b'); gradient.addColorStop(1, '#e74c3c'); }
-                } else {
-                    if (this.type === 'tank') { gradient.addColorStop(0, '#7ed6df'); gradient.addColorStop(1, '#2980b9'); }
-                    else if (this.type === 'healer') { gradient.addColorStop(0, '#81ecec'); gradient.addColorStop(1, '#00cec9'); }
-                    else if (this.type === 'musketeer') { gradient.addColorStop(0, '#80bfff'); gradient.addColorStop(1, '#1a5276'); }
-                    else if (this.type === 'cavalry') { gradient.addColorStop(0, '#3498db'); gradient.addColorStop(1, '#1a5276'); }
-                    else if (this.type === 'cannon') { gradient.addColorStop(0, '#66b3ff'); gradient.addColorStop(1, '#0066b3'); }
-                    else { gradient.addColorStop(0, '#74b9ff'); gradient.addColorStop(1, '#3498db'); }
-                }
-                
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fillStyle = gradient; ctx.fill();
-                
-                if (this.type === 'healer') {
-                    ctx.beginPath();
-                    ctx.moveTo(this.x - this.radius/2, this.y);
-                    ctx.lineTo(this.x + this.radius/2, this.y);
-                    ctx.moveTo(this.x, this.y - this.radius/2);
-                    ctx.lineTo(this.x, this.y + this.radius/2);
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                } else if (this.type === 'musketeer') {
-                    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.facingAngle);
-                    ctx.beginPath(); ctx.moveTo(-this.radius, 0); ctx.lineTo(this.radius, 0);
-                    ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e'; ctx.lineWidth = this.isCharging ? 4 : 3; ctx.stroke();
-                    if (this.isCharging) {
-                        ctx.beginPath(); ctx.moveTo(this.radius, 0); ctx.lineTo(this.radius + 8, 0);
-                        ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 2; ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(this.radius + 8, 0); ctx.lineTo(this.radius + 4, -3); ctx.lineTo(this.radius + 4, 3); ctx.closePath();
-                        ctx.fillStyle = '#bdc3c7'; ctx.fill();
-                    } else { ctx.beginPath(); ctx.arc(this.radius, 0, 3, 0, Math.PI * 2); ctx.fillStyle = '#34495e'; ctx.fill(); }
-                    ctx.restore();
-                    if (this.isCharging) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)'; ctx.lineWidth = 2; ctx.stroke(); }
-                } else if (this.type === 'cavalry') {
-                    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.facingAngle);
-                    ctx.beginPath(); ctx.ellipse(0, 0, this.radius * 1.2, this.radius * 0.8, 0, 0, Math.PI * 2);
-                    ctx.fillStyle = this.team === 'red' ? '#e74c3c' : '#3498db'; ctx.fill();
-                    ctx.beginPath(); ctx.arc(this.radius * 1.2, 0, this.radius * 0.5, 0, Math.PI * 2);
-                    ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9'; ctx.fill();
-                    if (this.isCharging) {
-                        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-this.radius * 1.5 - i * 5, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2); ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`; ctx.fill(); }
-                        ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; ctx.lineWidth = 2;
-                        for (let i = 0; i < 3; i++) {
-                            ctx.beginPath(); ctx.moveTo(-this.radius * 1.5 - i * 8, -this.radius * 0.5); ctx.lineTo(-this.radius * 2 - i * 15, -this.radius * 0.5 - i * 2); ctx.stroke();
-                            ctx.beginPath(); ctx.moveTo(-this.radius * 1.5 - i * 8, this.radius * 0.5); ctx.lineTo(-this.radius * 2 - i * 15, this.radius * 0.5 + i * 2); ctx.stroke();
-                        }
-                        if (!this.hasUsedFirstCharge) { ctx.beginPath(); ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)'; ctx.lineWidth = 3; ctx.stroke(); }
-                    }
-                    ctx.restore();
-                    if (!this.isCharging && this.hasUsedFirstCharge) {
-                        const now = performance.now(); const chargeProgress = Math.min(1, (now - this.lastCharge) / this.chargeCooldown);
-                        if (chargeProgress < 1) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress)); ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)'; ctx.lineWidth = 3; ctx.stroke(); }
-                    }
-                } else if (this.type === 'cannon') {
-                    // Draw cannon body
+                if (this.type === 'cannon') {
+                    // DRAW IMPROVED CANNON DESIGN
                     ctx.save();
                     ctx.translate(this.x, this.y);
                     
-                    // Draw wheels
-                    ctx.fillStyle = this.team === 'red' ? '#8B4513' : '#2F4F4F';
+                    // Draw cannon base (dark metal)
+                    const baseGradient = ctx.createRadialGradient(
+                        0, 0, this.radius * 0.3,
+                        0, 0, this.radius * 0.9
+                    );
+                    
+                    if (this.team === 'red') {
+                        baseGradient.addColorStop(0, '#8B4513');
+                        baseGradient.addColorStop(1, '#5D2900');
+                    } else {
+                        baseGradient.addColorStop(0, '#2F4F4F');
+                        baseGradient.addColorStop(1, '#1C2F2F');
+                    }
+                    
+                    ctx.fillStyle = baseGradient;
                     ctx.beginPath();
-                    ctx.arc(-this.radius * 0.6, this.radius * 0.4, this.radius * 0.25, 0, Math.PI * 2);
+                    ctx.roundRect(-this.radius * 0.8, -this.radius * 0.4, this.radius * 1.6, this.radius * 0.8, this.radius * 0.2);
                     ctx.fill();
                     
+                    // Draw wheels (dark)
+                    ctx.fillStyle = this.team === 'red' ? '#5D2900' : '#1C2F2F';
                     ctx.beginPath();
-                    ctx.arc(this.radius * 0.6, this.radius * 0.4, this.radius * 0.25, 0, Math.PI * 2);
+                    ctx.arc(-this.radius * 0.6, this.radius * 0.3, this.radius * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(this.radius * 0.6, this.radius * 0.3, this.radius * 0.2, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Draw cannon barrel
+                    // Draw wheel details
+                    ctx.strokeStyle = this.team === 'red' ? '#8B4513' : '#2F4F4F';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(-this.radius * 0.6, this.radius * 0.3, this.radius * 0.15, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(this.radius * 0.6, this.radius * 0.3, this.radius * 0.15, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Draw cannon barrel with gradient
                     ctx.rotate(this.barrelAngle);
-                    const barrelGradient = ctx.createLinearGradient(-this.radius * 1.2, 0, this.radius * 1.2, 0);
-                    barrelGradient.addColorStop(0, '#444');
-                    barrelGradient.addColorStop(0.5, '#666');
-                    barrelGradient.addColorStop(1, '#444');
+                    const barrelGradient = ctx.createLinearGradient(
+                        -this.radius * 1.5, 0,
+                        this.radius * 1.5, 0
+                    );
+                    barrelGradient.addColorStop(0, '#666');
+                    barrelGradient.addColorStop(0.3, '#888');
+                    barrelGradient.addColorStop(0.7, '#888');
+                    barrelGradient.addColorStop(1, '#666');
                     
                     ctx.fillStyle = barrelGradient;
-                    ctx.fillRect(-this.radius * 1.2, -this.radius * 0.15, this.radius * 2.4, this.radius * 0.3);
+                    ctx.beginPath();
+                    ctx.roundRect(-this.radius * 1.5, -this.radius * 0.15, this.radius * 3, this.radius * 0.3, this.radius * 0.1);
+                    ctx.fill();
                     
-                    // Draw muzzle
-                    ctx.fillStyle = '#222';
-                    ctx.fillRect(this.radius * 1.2, -this.radius * 0.2, this.radius * 0.3, this.radius * 0.4);
+                    // Draw barrel rings/details
+                    ctx.strokeStyle = '#444';
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 3; i++) {
+                        const ringX = -this.radius * 1.2 + i * this.radius * 0.6;
+                        ctx.beginPath();
+                        ctx.arc(ringX, 0, this.radius * 0.2, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                    
+                    // Draw muzzle with metallic shine
+                    const muzzleGradient = ctx.createRadialGradient(
+                        this.radius * 1.5, 0, 0,
+                        this.radius * 1.5, 0, this.radius * 0.3
+                    );
+                    muzzleGradient.addColorStop(0, '#AAA');
+                    muzzleGradient.addColorStop(1, '#555');
+                    
+                    ctx.fillStyle = muzzleGradient;
+                    ctx.beginPath();
+                    ctx.roundRect(this.radius * 1.5, -this.radius * 0.2, this.radius * 0.3, this.radius * 0.4, this.radius * 0.05);
+                    ctx.fill();
                     
                     ctx.restore();
                     
@@ -1174,11 +1234,19 @@
                     
                     if (reloadProgress < 1) {
                         ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.radius + 12, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress));
-                        ctx.strokeStyle = reloadProgress > 0.9 ? 'rgba(46, 204, 113, 0.8)' : 
-                                         reloadProgress > 0.5 ? 'rgba(243, 156, 18, 0.8)' : 
-                                         'rgba(231, 76, 60, 0.8)';
+                        ctx.arc(this.x, this.y, this.radius + 15, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress));
+                        
+                        // Color changes based on reload progress
+                        if (reloadProgress > 0.9) {
+                            ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
+                        } else if (reloadProgress > 0.5) {
+                            ctx.strokeStyle = 'rgba(243, 156, 18, 0.8)';
+                        } else {
+                            ctx.strokeStyle = 'rgba(231, 76, 60, 0.8)';
+                        }
+                        
                         ctx.lineWidth = 4;
+                        ctx.lineCap = 'round';
                         ctx.stroke();
                         
                         // Show reload time remaining
@@ -1190,14 +1258,109 @@
                         if (secondsLeft > 0) {
                             ctx.fillText(`${secondsLeft}s`, this.x, this.y - this.radius - 25);
                         }
+                        
+                        // Show range indicator when aiming
+                        const enemies = circles.filter(c => c.team !== this.team && c.health > 0);
+                        if (enemies.length > 0 && reloadProgress > 0.9) {
+                            const closestEnemy = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
+                            const distToEnemy = this.distanceTo(closestEnemy);
+                            
+                            // Draw range arc
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, this.cannonRange, this.barrelAngle - this.spreadAngle/2, this.barrelAngle + this.spreadAngle/2);
+                            ctx.strokeStyle = this.team === 'red' ? 'rgba(231, 76, 60, 0.3)' : 'rgba(52, 152, 219, 0.3)';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                            
+                            // Draw line to target if in range
+                            if (distToEnemy <= this.cannonRange) {
+                                ctx.beginPath();
+                                ctx.moveTo(this.x, this.y);
+                                ctx.lineTo(closestEnemy.x, closestEnemy.y);
+                                ctx.strokeStyle = this.team === 'red' ? 'rgba(231, 76, 60, 0.5)' : 'rgba(52, 152, 219, 0.5)';
+                                ctx.lineWidth = 1;
+                                ctx.setLineDash([5, 3]);
+                                ctx.stroke();
+                                ctx.setLineDash([]);
+                            }
+                        }
                     } else if (!this.isLoaded) {
                         // Cannon is loaded and ready
                         this.isLoaded = true;
                         ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.radius + 8, 0, Math.PI * 2);
+                        ctx.arc(this.x, this.y, this.radius + 10, 0, Math.PI * 2);
                         ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
                         ctx.lineWidth = 3;
                         ctx.stroke();
+                        
+                        // Draw "READY" text
+                        ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
+                        ctx.font = 'bold 11px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('READY', this.x, this.y - this.radius - 25);
+                    }
+                } else {
+                    // Draw other units normally
+                    const gradient = ctx.createRadialGradient(this.x - 3, this.y - 3, 3, this.x, this.y, this.radius);
+                    
+                    if (this.team === 'red') {
+                        if (this.type === 'tank') { gradient.addColorStop(0, '#ff7979'); gradient.addColorStop(1, '#c0392b'); }
+                        else if (this.type === 'healer') { gradient.addColorStop(0, '#f8c471'); gradient.addColorStop(1, '#e67e22'); }
+                        else if (this.type === 'musketeer') { gradient.addColorStop(0, '#ff9f80'); gradient.addColorStop(1, '#d35400'); }
+                        else if (this.type === 'cavalry') { gradient.addColorStop(0, '#e74c3c'); gradient.addColorStop(1, '#c0392b'); }
+                        else { gradient.addColorStop(0, '#ff6b6b'); gradient.addColorStop(1, '#e74c3c'); }
+                    } else {
+                        if (this.type === 'tank') { gradient.addColorStop(0, '#7ed6df'); gradient.addColorStop(1, '#2980b9'); }
+                        else if (this.type === 'healer') { gradient.addColorStop(0, '#81ecec'); gradient.addColorStop(1, '#00cec9'); }
+                        else if (this.type === 'musketeer') { gradient.addColorStop(0, '#80bfff'); gradient.addColorStop(1, '#1a5276'); }
+                        else if (this.type === 'cavalry') { gradient.addColorStop(0, '#3498db'); gradient.addColorStop(1, '#1a5276'); }
+                        else { gradient.addColorStop(0, '#74b9ff'); gradient.addColorStop(1, '#3498db'); }
+                    }
+                    
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fillStyle = gradient; ctx.fill();
+                    
+                    if (this.type === 'healer') {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x - this.radius/2, this.y);
+                        ctx.lineTo(this.x + this.radius/2, this.y);
+                        ctx.moveTo(this.x, this.y - this.radius/2);
+                        ctx.lineTo(this.x, this.y + this.radius/2);
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    } else if (this.type === 'musketeer') {
+                        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.facingAngle);
+                        ctx.beginPath(); ctx.moveTo(-this.radius, 0); ctx.lineTo(this.radius, 0);
+                        ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e'; ctx.lineWidth = this.isCharging ? 4 : 3; ctx.stroke();
+                        if (this.isCharging) {
+                            ctx.beginPath(); ctx.moveTo(this.radius, 0); ctx.lineTo(this.radius + 8, 0);
+                            ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 2; ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(this.radius + 8, 0); ctx.lineTo(this.radius + 4, -3); ctx.lineTo(this.radius + 4, 3); ctx.closePath();
+                            ctx.fillStyle = '#bdc3c7'; ctx.fill();
+                        } else { ctx.beginPath(); ctx.arc(this.radius, 0, 3, 0, Math.PI * 2); ctx.fillStyle = '#34495e'; ctx.fill(); }
+                        ctx.restore();
+                        if (this.isCharging) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)'; ctx.lineWidth = 2; ctx.stroke(); }
+                    } else if (this.type === 'cavalry') {
+                        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.facingAngle);
+                        ctx.beginPath(); ctx.ellipse(0, 0, this.radius * 1.2, this.radius * 0.8, 0, 0, Math.PI * 2);
+                        ctx.fillStyle = this.team === 'red' ? '#e74c3c' : '#3498db'; ctx.fill();
+                        ctx.beginPath(); ctx.arc(this.radius * 1.2, 0, this.radius * 0.5, 0, Math.PI * 2);
+                        ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9'; ctx.fill();
+                        if (this.isCharging) {
+                            for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-this.radius * 1.5 - i * 5, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2); ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`; ctx.fill(); }
+                            ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; ctx.lineWidth = 2;
+                            for (let i = 0; i < 3; i++) {
+                                ctx.beginPath(); ctx.moveTo(-this.radius * 1.5 - i * 8, -this.radius * 0.5); ctx.lineTo(-this.radius * 2 - i * 15, -this.radius * 0.5 - i * 2); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(-this.radius * 1.5 - i * 8, this.radius * 0.5); ctx.lineTo(-this.radius * 2 - i * 15, this.radius * 0.5 + i * 2); ctx.stroke();
+                            }
+                            if (!this.hasUsedFirstCharge) { ctx.beginPath(); ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)'; ctx.lineWidth = 3; ctx.stroke(); }
+                        }
+                        ctx.restore();
+                        if (!this.isCharging && this.hasUsedFirstCharge) {
+                            const now = performance.now(); const chargeProgress = Math.min(1, (now - this.lastCharge) / this.chargeCooldown);
+                            if (chargeProgress < 1) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress)); ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)'; ctx.lineWidth = 3; ctx.stroke(); }
+                        }
                     }
                 }
                 
@@ -1243,52 +1406,62 @@
                 if (!gameRunning) return;
                 this.applySeparation([...enemies, ...allies]);
 
-                // CANNON AI - NEW UNIT!
+                // CANNON AI - IMPROVED!
                 if (this.type === 'cannon') {
                     if (enemies.length === 0) return;
                     
                     const now = performance.now();
-                    
-                    // Update reload progress
                     const timeSinceLastShot = now - this.lastShot;
+                    
+                    // Update reload status
                     if (timeSinceLastShot >= this.attackCooldown && !this.isLoaded) {
                         this.isLoaded = true;
                     }
                     
-                    // Find closest enemy
-                    let closestEnemy = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
-                    let distToEnemy = this.distanceTo(closestEnemy);
+                    // Find best target (closest enemy in range)
+                    let bestTarget = null;
+                    let bestTargetDistance = Infinity;
                     
-                    // Face enemy (slowly)
-                    let dx = closestEnemy.x - this.x;
-                    let dy = closestEnemy.y - this.y;
+                    for (let enemy of enemies) {
+                        const dist = this.distanceTo(enemy);
+                        if (dist <= this.cannonRange && dist < bestTargetDistance) {
+                            bestTarget = enemy;
+                            bestTargetDistance = dist;
+                        }
+                    }
+                    
+                    if (!bestTarget) return;
+                    
+                    // Face target slowly
+                    let dx = bestTarget.x - this.x;
+                    let dy = bestTarget.y - this.y;
                     let targetAngle = Math.atan2(dy, dx);
                     
-                    // Smoothly rotate toward target
+                    // Smooth rotation
                     let angleDiff = targetAngle - this.barrelAngle;
                     while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
                     while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
                     
                     this.barrelAngle += angleDiff * this.turnSpeed;
                     
-                    // Move very slowly toward enemy if too far
-                    if (distToEnemy > this.cannonRange * 1.5) {
-                        if (distToEnemy > 0) {
-                            const desiredX = dx / distToEnemy;
-                            const desiredY = dy / distToEnemy;
+                    // Minimal movement (cannons barely move)
+                    if (bestTargetDistance > this.cannonRange * 0.8) {
+                        if (bestTargetDistance > 0) {
+                            const desiredX = dx / bestTargetDistance;
+                            const desiredY = dy / bestTargetDistance;
                             this.velX += (desiredX * this.maxSpeed - this.velX) * this.turnSpeed;
                             this.velY += (desiredY * this.maxSpeed - this.velY) * this.turnSpeed;
                             this.x += this.velX;
                             this.y += this.velY;
                         }
                     } else {
-                        this.velX *= 0.9;
-                        this.velY *= 0.9;
+                        this.velX *= 0.95;
+                        this.velY *= 0.95;
                     }
                     
                     // FIRE CANNON if loaded and enemy in range!
-                    if (this.isLoaded && distToEnemy <= this.cannonRange) {
-                        this.fireCannon(closestEnemy);
+                    if (this.isLoaded && bestTargetDistance <= this.cannonRange) {
+                        this.fireCannon(bestTarget);
                         this.isLoaded = false;
                         this.lastShot = now;
                     }
@@ -1296,7 +1469,8 @@
                     return;
                 }
 
-                // REST OF THE AI CODE REMAINS THE SAME...
+                // REST OF THE AI CODE (other units)...
+                // ... (keeping all other unit AI the same as before)
                 // CAVALRY AI
                 if (this.type === 'cavalry') {
                     if (enemies.length === 0) return;
@@ -1556,81 +1730,93 @@
                 }
             }
 
-            // NEW METHOD: Cannon firing logic
+            // NEW: Improved Cannon firing logic with SHOTGUN mechanics
             fireCannon(target) {
-                // Create canister shot effect
-                cannonEffects.push(new CanisterEffect(this.x, this.y, target.x, target.y, this.team));
+                const now = performance.now();
                 
-                // Calculate explosion center (slightly past target for realism)
-                const dx = target.x - this.x;
-                const dy = target.y - this.y;
-                const distance = Math.hypot(dx, dy);
-                const explosionX = this.x + (dx / distance) * Math.min(distance, this.cannonRange);
-                const explosionY = this.y + (dy / distance) * Math.min(distance, this.cannonRange);
+                // Create cannon shot effect
+                cannonEffects.push(new CannonShotEffect(this.x, this.y, this.barrelAngle, this.team, this.cannonRange));
                 
-                // Create explosion effect
-                const explosionRadius = 80;
-                cannonEffects.push(new ExplosionEffect(explosionX, explosionY, explosionRadius, this.team));
-                
-                // Calculate AOE damage to all nearby enemies
+                // Calculate enemies in the shotgun cone
                 const enemies = circles.filter(c => c.team !== this.team && c.health > 0);
                 let totalDamageDealt = 0;
+                let enemiesHit = 0;
                 
                 for (let enemy of enemies) {
-                    const distToExplosion = Math.hypot(enemy.x - explosionX, enemy.y - explosionY);
+                    // Calculate angle to enemy
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const distance = Math.hypot(dx, dy);
+                    const angleToEnemy = Math.atan2(dy, dx);
                     
-                    // If enemy is within explosion radius
-                    if (distToExplosion <= explosionRadius) {
-                        // Calculate damage based on distance from center
-                        // CLOSER = MORE DAMAGE, FARTHER = LESS DAMAGE
-                        const distanceFactor = 1 - (distToExplosion / explosionRadius);
+                    // Check if enemy is within range
+                    if (distance <= this.cannonRange) {
+                        // Check if enemy is within the shotgun cone (45 degree spread)
+                        const angleDiff = Math.abs(angleToEnemy - this.barrelAngle);
+                        const normalizedAngleDiff = Math.abs(((angleDiff + Math.PI) % (2 * Math.PI)) - Math.PI);
                         
-                        // Base damage (CRAZY HIGH as requested!)
-                        let damage = 80; // Base center damage
-                        
-                        // Apply distance scaling (center: 100%, edge: 20%)
-                        damage *= (0.2 + 0.8 * distanceFactor);
-                        
-                        // Add some randomness ±10%
-                        damage *= 0.9 + Math.random() * 0.2;
-                        
-                        // Apply directional multiplier if applicable
-                        const damageMultiplier = getDirectionalDamageMultiplier(this, enemy);
-                        damage *= damageMultiplier;
-                        
-                        // Round to integer
-                        damage = Math.floor(damage);
-                        
-                        if (damage > 0) {
-                            enemy.health -= damage;
-                            this.totalDamageDealt += damage;
-                            totalDamageDealt += damage;
+                        if (normalizedAngleDiff <= this.spreadAngle / 2) {
+                            // Calculate damage based on distance (SHOTGUN FALLOFF!)
+                            // Close range: 100% damage, Max range: 17% damage (120 → 20)
+                            const distanceFactor = 1 - (distance / this.cannonRange);
                             
-                            if (damage > highestSingleDamage) highestSingleDamage = damage;
+                            // Base damage with falloff
+                            let damage = this.minDamage + (this.maxDamage - this.minDamage) * distanceFactor;
                             
-                            // Show damage text (red if high damage, orange if medium, yellow if low)
-                            let isCritical = damage > 60;
-                            damageTexts.push(new DamageText(
-                                enemy.x, 
-                                enemy.y - enemy.radius - 8, 
-                                damage, 
-                                false, 
-                                isCritical
-                            ));
+                            // Apply some randomness ±15%
+                            damage *= 0.85 + Math.random() * 0.3;
+                            
+                            // Apply directional multiplier if applicable
+                            const damageMultiplier = getDirectionalDamageMultiplier(this, enemy);
+                            damage *= damageMultiplier;
+                            
+                            // Round to integer
+                            damage = Math.floor(damage);
+                            
+                            if (damage > 0) {
+                                enemy.health -= damage;
+                                this.totalDamageDealt += damage;
+                                totalDamageDealt += damage;
+                                enemiesHit++;
+                                
+                                if (damage > highestSingleDamage) highestSingleDamage = damage;
+                                
+                                // Show damage text with color based on damage amount
+                                let isCritical = damage > 80;
+                                damageTexts.push(new DamageText(
+                                    enemy.x, 
+                                    enemy.y - enemy.radius - 8, 
+                                    damage, 
+                                    false, 
+                                    isCritical
+                                ));
+                                
+                                // Create explosion effect at hit location (smaller for farther hits)
+                                const explosionSize = 30 + (damage / 4);
+                                cannonEffects.push(new ExplosionEffect(
+                                    enemy.x, 
+                                    enemy.y, 
+                                    explosionSize, 
+                                    this.team,
+                                    damage / this.maxDamage
+                                ));
+                            }
                         }
                     }
                 }
                 
-                // Show total damage notification if significant
-                if (totalDamageDealt > 0) {
-                    console.log(`Cannon fired! Total damage: ${totalDamageDealt}`);
+                // Show notification if significant damage was dealt
+                if (totalDamageDealt > 100) {
+                    showNotification(`Cannon hit ${enemiesHit} enemies for ${totalDamageDealt} total damage!`, 'warning');
                 }
                 
                 // Reset reload state
                 this.isLoaded = false;
+                this.lastShot = now;
             }
         }
 
+        // Rest of the code remains the same...
         function saveOriginalPlacements() {
             originalCircles = circles.map(circle => ({
                 x: circle.x, y: circle.y, team: circle.team, type: circle.type,
@@ -1766,7 +1952,7 @@
             circles = []; 
             const padding = mapPadding + 30;
             
-            // Red Team - Balanced composition with CANNON
+            // Red Team with CANNON
             for (let i = 0; i < 4; i++) circles.push(new Circle(padding + Math.random() * (canvas.width/2 - padding*2), padding + Math.random() * (canvas.height - padding*2), 'red', 'soldier'));
             circles.push(new Circle(padding + 40, canvas.height/2 - 60, 'red', 'tank'));
             circles.push(new Circle(padding + 80, canvas.height/2 + 60, 'red', 'tank'));
@@ -1776,9 +1962,9 @@
             circles.push(new Circle(padding + 140, canvas.height*3/4, 'red', 'musketeer'));
             circles.push(new Circle(padding + 160, canvas.height/5, 'red', 'cavalry'));
             circles.push(new Circle(padding + 180, canvas.height*4/5, 'red', 'cavalry'));
-            circles.push(new Circle(padding + 200, canvas.height/2, 'red', 'cannon')); // NEW CANNON!
+            circles.push(new Circle(padding + 200, canvas.height/2, 'red', 'cannon'));
             
-            // Blue Team - Balanced composition with CANNON
+            // Blue Team with CANNON
             for (let i = 0; i < 4; i++) circles.push(new Circle(canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*2), padding + Math.random() * (canvas.height - padding*2), 'blue', 'soldier'));
             circles.push(new Circle(canvas.width - padding - 40, canvas.height/2 - 60, 'blue', 'tank'));
             circles.push(new Circle(canvas.width - padding - 80, canvas.height/2 + 60, 'blue', 'tank'));
@@ -1788,9 +1974,9 @@
             circles.push(new Circle(canvas.width - padding - 140, canvas.height*3/4, 'blue', 'musketeer'));
             circles.push(new Circle(canvas.width - padding - 160, canvas.height/5, 'blue', 'cavalry'));
             circles.push(new Circle(canvas.width - padding - 180, canvas.height*4/5, 'blue', 'cavalry'));
-            circles.push(new Circle(canvas.width - padding - 200, canvas.height/2, 'blue', 'cannon')); // NEW CANNON!
+            circles.push(new Circle(canvas.width - padding - 200, canvas.height/2, 'blue', 'cannon'));
             
-            showNotification('Auto-placed armies with Cannons!', 'info');
+            showNotification('Auto-placed armies with new Cannons!', 'info');
         };
         
         playAgainHeaderBtn.onclick = () => { playAgain(); };
@@ -1853,7 +2039,7 @@
         }
 
         // Initialize
-        showNotification('Click to place units. Try the new Cannon!', 'info');
+        showNotification('New Cannon added! 65% range with shotgun spread!', 'info');
         resizeCanvas(); 
         gameLoop();
         updateActiveButton();
