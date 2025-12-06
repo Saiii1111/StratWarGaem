@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Battle Simulator</title>
+    <title>Neon Battle Simulator - Ultimate Edition</title>
     <style>
         * { 
             margin: 0; 
@@ -470,7 +470,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Neon Battle Simulator</h1>
+        <h1>Neon Battle Simulator - Ultimate</h1>
         
         <div class="header-controls">
             <!-- Unit Selection Buttons -->
@@ -607,7 +607,7 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // NEW: Better Explosion Effect
+        // Improved Explosion Effect
         class ExplosionEffect {
             constructor(x, y, maxRadius, team, intensity) {
                 this.x = x;
@@ -647,7 +647,6 @@
                 const elapsed = performance.now() - this.startTime;
                 const progress = elapsed / this.duration;
                 
-                // Update explosion radius
                 if (progress < 0.5) {
                     this.currentRadius = this.maxRadius * (progress * 2);
                 } else {
@@ -719,7 +718,7 @@
             }
         }
 
-        // NEW: Cannon Shot Effect with pellets
+        // Cannon Shot Effect with pellets
         class CannonShotEffect {
             constructor(x, y, angle, team, range) {
                 this.x = x;
@@ -737,8 +736,8 @@
                 
                 for (let i = 0; i < pelletCount; i++) {
                     const pelletAngle = angle + (Math.random() - 0.5) * spreadAngle;
-                    const distance = range * (0.7 + Math.random() * 0.3); // Some variance in range
-                    const speed = distance / (this.duration * 0.8); // Reach target in 80% of duration
+                    const distance = range * (0.7 + Math.random() * 0.3);
+                    const speed = distance / (this.duration * 0.8);
                     
                     this.pellets.push({
                         x: this.x,
@@ -765,7 +764,6 @@
                         pellet.y = this.y + Math.sin(pellet.angle) * pellet.distance;
                         pellet.life = 1 - (pellet.distance / pellet.maxDistance);
                         
-                        // Check for hit (simplified - actual damage calculation is in Circle class)
                         if (pellet.distance >= pellet.maxDistance * 0.95) {
                             pellet.hit = true;
                         }
@@ -967,7 +965,7 @@
                 ctx.save();
                 ctx.translate(mouseX, mouseY);
                 
-                // Draw cannon body (dark metal)
+                // Draw cannon body
                 ctx.fillStyle = "rgba(60, 60, 60, 0.8)";
                 ctx.fillRect(-radius * 0.8, -radius * 0.4, radius * 1.6, radius * 0.8);
                 
@@ -980,14 +978,13 @@
                 ctx.arc(radius * 0.6, radius * 0.3, radius * 0.2, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw barrel
-                ctx.rotate(Math.PI / 4);
+                // Draw barrel pointing right
                 ctx.fillStyle = "rgba(80, 80, 80, 0.8)";
-                ctx.fillRect(-radius * 1.5, -radius * 0.15, radius * 3, radius * 0.3);
+                ctx.fillRect(0, -radius * 0.15, radius * 1.8, radius * 0.3);
                 
                 // Draw muzzle
                 ctx.fillStyle = "rgba(100, 100, 100, 0.8)";
-                ctx.fillRect(radius * 1.5, -radius * 0.2, radius * 0.3, radius * 0.4);
+                ctx.fillRect(radius * 1.8, -radius * 0.2, radius * 0.3, radius * 0.4);
                 
                 ctx.restore();
             }
@@ -1114,19 +1111,20 @@
                     this.currentVelocity = 0; this.chargeBoost = 0; this.hasUsedFirstCharge = false;
                     this.lastCharge = performance.now() - this.chargeCooldown - 10000;
                 } else if (type === 'cannon') {
-                    // IMPROVED CANNON STATS
-                    this.radius = baseUnitSize * 1.6 * sizeMultiplier; // Bigger
-                    this.health = 180; this.maxHealth = 180; // More health
-                    this.attackPower = 0; // Not used directly
-                    this.attackCooldown = 35000; // 35 SECOND RELOAD
-                    this.maxSpeed = 0.2 * sizeMultiplier; // Slower movement
-                    this.turnSpeed = 0.04; // Slower turning
+                    // FIXED: REALISTIC 1800'S CANNON - STARTS LOADED!
+                    this.radius = baseUnitSize * 1.6 * sizeMultiplier;
+                    this.health = 180; this.maxHealth = 180;
+                    this.attackPower = 0;
+                    this.attackCooldown = 35000; // 35 second reload
+                    this.maxSpeed = 0.2 * sizeMultiplier;
+                    this.turnSpeed = 0.04;
                     
-                    // 65% OF MAP RANGE AS REQUESTED!
+                    // 65% OF MAP RANGE (HIDDEN - NO VISUAL INDICATORS)
                     this.cannonRange = (canvas.width * 0.65) * sizeMultiplier;
-                    this.lastShot = 0;
-                    this.isLoaded = false;
+                    this.lastShot = performance.now() - this.attackCooldown; // START LOADED!
+                    this.isLoaded = true; // FIXED: Starts loaded, not reloading!
                     this.barrelAngle = Math.PI / 4; // 45 degree default
+                    this.rotationAngle = Math.PI / 4; // Body rotation angle (same as barrel)
                     
                     // Shotgun properties
                     this.pelletCount = 20;
@@ -1144,11 +1142,14 @@
                 if (Math.abs(this.velX) > 0.1 || Math.abs(this.velY) > 0.1) this.facingAngle = Math.atan2(this.velY, this.velX);
                 
                 if (this.type === 'cannon') {
-                    // DRAW IMPROVED CANNON DESIGN
+                    // DRAW 1800's CANNON - BARREL AND BODY ROTATE TOGETHER
                     ctx.save();
                     ctx.translate(this.x, this.y);
                     
-                    // Draw cannon base (dark metal)
+                    // Rotate entire cannon as one piece (like real 1800s cannon)
+                    ctx.rotate(this.rotationAngle);
+                    
+                    // Draw cannon base (wooden carriage)
                     const baseGradient = ctx.createRadialGradient(
                         0, 0, this.radius * 0.3,
                         0, 0, this.radius * 0.9
@@ -1167,7 +1168,7 @@
                     ctx.roundRect(-this.radius * 0.8, -this.radius * 0.4, this.radius * 1.6, this.radius * 0.8, this.radius * 0.2);
                     ctx.fill();
                     
-                    // Draw wheels (dark)
+                    // Draw wheels (wooden)
                     ctx.fillStyle = this.team === 'red' ? '#5D2900' : '#1C2F2F';
                     ctx.beginPath();
                     ctx.arc(-this.radius * 0.6, this.radius * 0.3, this.radius * 0.2, 0, Math.PI * 2);
@@ -1176,8 +1177,8 @@
                     ctx.arc(this.radius * 0.6, this.radius * 0.3, this.radius * 0.2, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Draw wheel details
-                    ctx.strokeStyle = this.team === 'red' ? '#8B4513' : '#2F4F4F';
+                    // Draw wheel details (metal rims)
+                    ctx.strokeStyle = this.team === 'red' ? '#654321' : '#2F4F4F';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.arc(-this.radius * 0.6, this.radius * 0.3, this.radius * 0.15, 0, Math.PI * 2);
@@ -1186,11 +1187,10 @@
                     ctx.arc(this.radius * 0.6, this.radius * 0.3, this.radius * 0.15, 0, Math.PI * 2);
                     ctx.stroke();
                     
-                    // Draw cannon barrel with gradient
-                    ctx.rotate(this.barrelAngle);
+                    // Draw cannon barrel (cast iron)
                     const barrelGradient = ctx.createLinearGradient(
-                        -this.radius * 1.5, 0,
-                        this.radius * 1.5, 0
+                        0, -this.radius * 0.15,
+                        this.radius * 1.8, -this.radius * 0.15
                     );
                     barrelGradient.addColorStop(0, '#666');
                     barrelGradient.addColorStop(0.3, '#888');
@@ -1199,40 +1199,42 @@
                     
                     ctx.fillStyle = barrelGradient;
                     ctx.beginPath();
-                    ctx.roundRect(-this.radius * 1.5, -this.radius * 0.15, this.radius * 3, this.radius * 0.3, this.radius * 0.1);
+                    ctx.roundRect(0, -this.radius * 0.15, this.radius * 1.8, this.radius * 0.3, this.radius * 0.1);
                     ctx.fill();
                     
-                    // Draw barrel rings/details
+                    // Draw barrel rings/details (reinforcement rings)
                     ctx.strokeStyle = '#444';
                     ctx.lineWidth = 2;
                     for (let i = 0; i < 3; i++) {
-                        const ringX = -this.radius * 1.2 + i * this.radius * 0.6;
+                        const ringX = this.radius * 0.3 + i * this.radius * 0.4;
                         ctx.beginPath();
                         ctx.arc(ringX, 0, this.radius * 0.2, 0, Math.PI * 2);
                         ctx.stroke();
                     }
                     
-                    // Draw muzzle with metallic shine
+                    // Draw muzzle (brass)
                     const muzzleGradient = ctx.createRadialGradient(
-                        this.radius * 1.5, 0, 0,
-                        this.radius * 1.5, 0, this.radius * 0.3
+                        this.radius * 1.8, 0, 0,
+                        this.radius * 1.8, 0, this.radius * 0.3
                     );
-                    muzzleGradient.addColorStop(0, '#AAA');
-                    muzzleGradient.addColorStop(1, '#555');
+                    muzzleGradient.addColorStop(0, '#CD7F32');
+                    muzzleGradient.addColorStop(1, '#8B4513');
                     
                     ctx.fillStyle = muzzleGradient;
                     ctx.beginPath();
-                    ctx.roundRect(this.radius * 1.5, -this.radius * 0.2, this.radius * 0.3, this.radius * 0.4, this.radius * 0.05);
+                    ctx.roundRect(this.radius * 1.8, -this.radius * 0.2, this.radius * 0.3, this.radius * 0.4, this.radius * 0.05);
                     ctx.fill();
                     
                     ctx.restore();
                     
-                    // Draw reload indicator
+                    // Draw reload indicator ONLY when actually reloading
                     const now = performance.now();
                     const timeSinceLastShot = now - this.lastShot;
-                    const reloadProgress = Math.min(1, timeSinceLastShot / this.attackCooldown);
                     
-                    if (reloadProgress < 1) {
+                    // Show reload progress ONLY if cannon is reloading (after firing)
+                    if (timeSinceLastShot < this.attackCooldown) {
+                        const reloadProgress = timeSinceLastShot / this.attackCooldown;
+                        
                         ctx.beginPath();
                         ctx.arc(this.x, this.y, this.radius + 15, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress));
                         
@@ -1258,47 +1260,13 @@
                         if (secondsLeft > 0) {
                             ctx.fillText(`${secondsLeft}s`, this.x, this.y - this.radius - 25);
                         }
-                        
-                        // Show range indicator when aiming
-                        const enemies = circles.filter(c => c.team !== this.team && c.health > 0);
-                        if (enemies.length > 0 && reloadProgress > 0.9) {
-                            const closestEnemy = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
-                            const distToEnemy = this.distanceTo(closestEnemy);
-                            
-                            // Draw range arc
-                            ctx.beginPath();
-                            ctx.arc(this.x, this.y, this.cannonRange, this.barrelAngle - this.spreadAngle/2, this.barrelAngle + this.spreadAngle/2);
-                            ctx.strokeStyle = this.team === 'red' ? 'rgba(231, 76, 60, 0.3)' : 'rgba(52, 152, 219, 0.3)';
-                            ctx.lineWidth = 2;
-                            ctx.stroke();
-                            
-                            // Draw line to target if in range
-                            if (distToEnemy <= this.cannonRange) {
-                                ctx.beginPath();
-                                ctx.moveTo(this.x, this.y);
-                                ctx.lineTo(closestEnemy.x, closestEnemy.y);
-                                ctx.strokeStyle = this.team === 'red' ? 'rgba(231, 76, 60, 0.5)' : 'rgba(52, 152, 219, 0.5)';
-                                ctx.lineWidth = 1;
-                                ctx.setLineDash([5, 3]);
-                                ctx.stroke();
-                                ctx.setLineDash([]);
-                            }
-                        }
-                    } else if (!this.isLoaded) {
-                        // Cannon is loaded and ready
-                        this.isLoaded = true;
+                    } else if (this.isLoaded) {
+                        // Cannon is loaded and ready - subtle indicator
                         ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.radius + 10, 0, Math.PI * 2);
-                        ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
-                        ctx.lineWidth = 3;
+                        ctx.arc(this.x, this.y, this.radius + 8, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(46, 204, 113, 0.4)';
+                        ctx.lineWidth = 2;
                         ctx.stroke();
-                        
-                        // Draw "READY" text
-                        ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
-                        ctx.font = 'bold 11px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText('READY', this.x, this.y - this.radius - 25);
                     }
                 } else {
                     // Draw other units normally
@@ -1406,25 +1374,25 @@
                 if (!gameRunning) return;
                 this.applySeparation([...enemies, ...allies]);
 
-                // CANNON AI - IMPROVED!
+                // CANNON AI - FIXED: REALISTIC 1800'S CANNON
                 if (this.type === 'cannon') {
                     if (enemies.length === 0) return;
                     
                     const now = performance.now();
                     const timeSinceLastShot = now - this.lastShot;
                     
-                    // Update reload status
+                    // Update loaded status
                     if (timeSinceLastShot >= this.attackCooldown && !this.isLoaded) {
                         this.isLoaded = true;
                     }
                     
-                    // Find best target (closest enemy in range)
+                    // Find best target (closest enemy)
                     let bestTarget = null;
                     let bestTargetDistance = Infinity;
                     
                     for (let enemy of enemies) {
                         const dist = this.distanceTo(enemy);
-                        if (dist <= this.cannonRange && dist < bestTargetDistance) {
+                        if (dist < bestTargetDistance) {
                             bestTarget = enemy;
                             bestTargetDistance = dist;
                         }
@@ -1432,19 +1400,20 @@
                     
                     if (!bestTarget) return;
                     
-                    // Face target slowly
+                    // Face target - rotate entire cannon as one piece
                     let dx = bestTarget.x - this.x;
                     let dy = bestTarget.y - this.y;
                     let targetAngle = Math.atan2(dy, dx);
                     
-                    // Smooth rotation
-                    let angleDiff = targetAngle - this.barrelAngle;
+                    // Smooth rotation (entire cannon rotates)
+                    let angleDiff = targetAngle - this.rotationAngle;
                     while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
                     while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
                     
-                    this.barrelAngle += angleDiff * this.turnSpeed;
+                    this.rotationAngle += angleDiff * this.turnSpeed;
+                    this.barrelAngle = this.rotationAngle; // Barrel angle matches body rotation
                     
-                    // Minimal movement (cannons barely move)
+                    // Minimal movement
                     if (bestTargetDistance > this.cannonRange * 0.8) {
                         if (bestTargetDistance > 0) {
                             const desiredX = dx / bestTargetDistance;
@@ -1470,8 +1439,6 @@
                 }
 
                 // REST OF THE AI CODE (other units)...
-                // ... (keeping all other unit AI the same as before)
-                // CAVALRY AI
                 if (this.type === 'cavalry') {
                     if (enemies.length === 0) return;
                     let closestEnemy = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
@@ -1610,7 +1577,7 @@
                     return;
                 }
 
-                // IMPROVED HEALER AI
+                // HEALER AI
                 if (this.type === 'healer') {
                     let healingCandidates = [];
                     
@@ -1730,7 +1697,7 @@
                 }
             }
 
-            // NEW: Improved Cannon firing logic with SHOTGUN mechanics
+            // Cannon firing logic with SHOTGUN mechanics
             fireCannon(target) {
                 const now = performance.now();
                 
@@ -1757,7 +1724,6 @@
                         
                         if (normalizedAngleDiff <= this.spreadAngle / 2) {
                             // Calculate damage based on distance (SHOTGUN FALLOFF!)
-                            // Close range: 100% damage, Max range: 17% damage (120 → 20)
                             const distanceFactor = 1 - (distance / this.cannonRange);
                             
                             // Base damage with falloff
@@ -1791,7 +1757,7 @@
                                     isCritical
                                 ));
                                 
-                                // Create explosion effect at hit location (smaller for farther hits)
+                                // Create explosion effect at hit location
                                 const explosionSize = 30 + (damage / 4);
                                 cannonEffects.push(new ExplosionEffect(
                                     enemy.x, 
@@ -1810,13 +1776,12 @@
                     showNotification(`Cannon hit ${enemiesHit} enemies for ${totalDamageDealt} total damage!`, 'warning');
                 }
                 
-                // Reset reload state
+                // Reset loaded state
                 this.isLoaded = false;
                 this.lastShot = now;
             }
         }
 
-        // Rest of the code remains the same...
         function saveOriginalPlacements() {
             originalCircles = circles.map(circle => ({
                 x: circle.x, y: circle.y, team: circle.team, type: circle.type,
@@ -1952,7 +1917,7 @@
             circles = []; 
             const padding = mapPadding + 30;
             
-            // Red Team with CANNON
+            // Red Team with CANNON (starts loaded!)
             for (let i = 0; i < 4; i++) circles.push(new Circle(padding + Math.random() * (canvas.width/2 - padding*2), padding + Math.random() * (canvas.height - padding*2), 'red', 'soldier'));
             circles.push(new Circle(padding + 40, canvas.height/2 - 60, 'red', 'tank'));
             circles.push(new Circle(padding + 80, canvas.height/2 + 60, 'red', 'tank'));
@@ -1964,7 +1929,7 @@
             circles.push(new Circle(padding + 180, canvas.height*4/5, 'red', 'cavalry'));
             circles.push(new Circle(padding + 200, canvas.height/2, 'red', 'cannon'));
             
-            // Blue Team with CANNON
+            // Blue Team with CANNON (starts loaded!)
             for (let i = 0; i < 4; i++) circles.push(new Circle(canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*2), padding + Math.random() * (canvas.height - padding*2), 'blue', 'soldier'));
             circles.push(new Circle(canvas.width - padding - 40, canvas.height/2 - 60, 'blue', 'tank'));
             circles.push(new Circle(canvas.width - padding - 80, canvas.height/2 + 60, 'blue', 'tank'));
@@ -1976,7 +1941,7 @@
             circles.push(new Circle(canvas.width - padding - 180, canvas.height*4/5, 'blue', 'cavalry'));
             circles.push(new Circle(canvas.width - padding - 200, canvas.height/2, 'blue', 'cannon'));
             
-            showNotification('Auto-placed armies with new Cannons!', 'info');
+            showNotification('Armies placed! Cannons start LOADED!', 'info');
         };
         
         playAgainHeaderBtn.onclick = () => { playAgain(); };
@@ -2039,7 +2004,7 @@
         }
 
         // Initialize
-        showNotification('New Cannon added! 65% range with shotgun spread!', 'info');
+        showNotification('Cannons improved! Now start LOADED!', 'info');
         resizeCanvas(); 
         gameLoop();
         updateActiveButton();
