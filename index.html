@@ -117,6 +117,7 @@
         .cannon-btn.active {
             background: #34495e;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+            transform: translateY(0);
         }
         
         .control-btn { background: #27ae60; }
@@ -361,6 +362,23 @@
             100% { transform: translateY(-30px) scale(1.2); opacity: 0; }
         }
 
+        /* NEW: Cannonball flying effect */
+        .cannonball-effect {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: cannonballTrail 0.8s ease-out forwards;
+            box-shadow: 0 0 15px rgba(255, 200, 50, 0.7);
+        }
+
+        @keyframes cannonballTrail {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.9; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
         /* Explosion animation */
         @keyframes explosion {
             0% { transform: scale(0.1); opacity: 1; }
@@ -599,6 +617,7 @@
 
         // CANNON SPECIFIC
         let cannonEffects = [];
+        let cannonballEffects = []; // NEW: For cannonball flying effects
 
         const mapPadding = 20;
         const MUSKET_RANGE = 150;
@@ -606,6 +625,170 @@
 
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
+
+        // NEW: Cannonball flying effect class
+        class CannonballEffect {
+            constructor(startX, startY, targetX, targetY, team) {
+                this.startX = startX;
+                this.startY = startY;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.team = team;
+                this.progress = 0;
+                this.speed = 0.08; // Slower for dramatic effect
+                this.distance = Math.hypot(targetX - startX, targetY - startY);
+                this.currentX = startX;
+                this.currentY = startY;
+                this.trail = [];
+                this.trailLength = 15;
+                this.hasExploded = false;
+                this.explosionTime = 0;
+                this.explosionRadius = 0;
+                this.maxExplosionRadius = 40;
+            }
+            
+            update() {
+                if (!this.hasExploded) {
+                    this.progress += this.speed;
+                    this.currentX = this.startX + (this.targetX - this.startX) * this.progress;
+                    this.currentY = this.startY + (this.targetY - this.startY) * this.progress;
+                    
+                    // Add to trail
+                    this.trail.push({x: this.currentX, y: this.currentY});
+                    if (this.trail.length > this.trailLength) {
+                        this.trail.shift();
+                    }
+                    
+                    // Check if reached target
+                    if (this.progress >= 1) {
+                        this.hasExploded = true;
+                        this.explosionTime = 0;
+                    }
+                    return true;
+                } else {
+                    // Explosion animation
+                    this.explosionTime += 0.05;
+                    this.explosionRadius = this.maxExplosionRadius * (1 - Math.abs(1 - this.explosionTime * 2));
+                    
+                    if (this.explosionTime >= 1) {
+                        return false; // Remove effect
+                    }
+                    return true;
+                }
+            }
+            
+            draw() {
+                if (!this.hasExploded) {
+                    // Draw trail
+                    for (let i = 0; i < this.trail.length; i++) {
+                        const point = this.trail[i];
+                        const alpha = i / this.trail.length;
+                        const size = 3 * alpha;
+                        
+                        const trailGradient = ctx.createRadialGradient(
+                            point.x, point.y, 0,
+                            point.x, point.y, size * 2
+                        );
+                        
+                        if (this.team === 'red') {
+                            trailGradient.addColorStop(0, `rgba(255, 200, 100, ${alpha * 0.7})`);
+                            trailGradient.addColorStop(1, `rgba(255, 100, 50, 0)`);
+                        } else {
+                            trailGradient.addColorStop(0, `rgba(100, 200, 255, ${alpha * 0.7})`);
+                            trailGradient.addColorStop(1, `rgba(50, 150, 255, 0)`);
+                        }
+                        
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+                        ctx.fillStyle = trailGradient;
+                        ctx.fill();
+                    }
+                    
+                    // Draw cannonball
+                    const cannonballGradient = ctx.createRadialGradient(
+                        this.currentX, this.currentY, 0,
+                        this.currentX, this.currentY, 6
+                    );
+                    
+                    if (this.team === 'red') {
+                        cannonballGradient.addColorStop(0, '#FFD700');
+                        cannonballGradient.addColorStop(0.5, '#FF8C00');
+                        cannonballGradient.addColorStop(1, '#FF4500');
+                    } else {
+                        cannonballGradient.addColorStop(0, '#87CEEB');
+                        cannonballGradient.addColorStop(0.5, '#4682B4');
+                        cannonballGradient.addColorStop(1, '#1E90FF');
+                    }
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.currentX, this.currentY, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = cannonballGradient;
+                    ctx.fill();
+                    
+                    // Add glow effect
+                    ctx.beginPath();
+                    ctx.arc(this.currentX, this.currentY, 12, 0, Math.PI * 2);
+                    const glowGradient = ctx.createRadialGradient(
+                        this.currentX, this.currentY, 6,
+                        this.currentX, this.currentY, 12
+                    );
+                    glowGradient.addColorStop(0, this.team === 'red' ? 'rgba(255, 200, 50, 0.8)' : 'rgba(100, 200, 255, 0.8)');
+                    glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = glowGradient;
+                    ctx.fill();
+                } else {
+                    // Draw explosion
+                    const explosionProgress = this.explosionTime;
+                    const explosionRadius = this.explosionRadius;
+                    const alpha = 1 - explosionProgress;
+                    
+                    // Main explosion
+                    const explosionGradient = ctx.createRadialGradient(
+                        this.targetX, this.targetY, 0,
+                        this.targetX, this.targetY, explosionRadius
+                    );
+                    
+                    if (this.team === 'red') {
+                        explosionGradient.addColorStop(0, `rgba(255, 200, 100, ${alpha})`);
+                        explosionGradient.addColorStop(0.6, `rgba(255, 100, 50, ${alpha * 0.7})`);
+                        explosionGradient.addColorStop(1, `rgba(255, 50, 0, ${alpha * 0.3})`);
+                    } else {
+                        explosionGradient.addColorStop(0, `rgba(100, 200, 255, ${alpha})`);
+                        explosionGradient.addColorStop(0.6, `rgba(50, 150, 255, ${alpha * 0.7})`);
+                        explosionGradient.addColorStop(1, `rgba(0, 100, 200, ${alpha * 0.3})`);
+                    }
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.targetX, this.targetY, explosionRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = explosionGradient;
+                    ctx.fill();
+                    
+                    // Shockwave
+                    const shockwaveRadius = explosionRadius * 1.5;
+                    ctx.beginPath();
+                    ctx.arc(this.targetX, this.targetY, shockwaveRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = this.team === 'red' ? 
+                        `rgba(255, 200, 100, ${alpha * 0.4})` : 
+                        `rgba(100, 200, 255, ${alpha * 0.4})`;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    
+                    // Particles
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2;
+                        const particleX = this.targetX + Math.cos(angle) * explosionRadius * 0.8;
+                        const particleY = this.targetY + Math.sin(angle) * explosionRadius * 0.8;
+                        
+                        ctx.beginPath();
+                        ctx.arc(particleX, particleY, 3, 0, Math.PI * 2);
+                        ctx.fillStyle = this.team === 'red' ? 
+                            `rgba(255, 200, 100, ${alpha * 0.6})` : 
+                            `rgba(100, 200, 255, ${alpha * 0.6})`;
+                        ctx.fill();
+                    }
+                }
+            }
+        }
 
         // Improved Explosion Effect
         class ExplosionEffect {
@@ -965,6 +1148,13 @@
                 ctx.save();
                 ctx.translate(mouseX, mouseY);
                 
+                // FIXED: Auto-rotate based on team side
+                if (team === 'blue') {
+                    ctx.rotate(Math.PI); // Blue team cannons face left (toward red side)
+                } else {
+                    ctx.rotate(0); // Red team cannons face right (toward blue side)
+                }
+                
                 // Draw cannon body
                 ctx.fillStyle = "rgba(60, 60, 60, 0.8)";
                 ctx.fillRect(-radius * 0.8, -radius * 0.4, radius * 1.6, radius * 0.8);
@@ -978,13 +1168,24 @@
                 ctx.arc(radius * 0.6, radius * 0.3, radius * 0.2, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw barrel pointing right
-                ctx.fillStyle = "rgba(80, 80, 80, 0.8)";
-                ctx.fillRect(0, -radius * 0.15, radius * 1.8, radius * 0.3);
-                
-                // Draw muzzle
-                ctx.fillStyle = "rgba(100, 100, 100, 0.8)";
-                ctx.fillRect(radius * 1.8, -radius * 0.2, radius * 0.3, radius * 0.4);
+                // Draw barrel pointing toward enemy side
+                if (team === 'blue') {
+                    // Blue team: barrel points left
+                    ctx.fillStyle = "rgba(80, 80, 80, 0.8)";
+                    ctx.fillRect(-radius * 1.8, -radius * 0.15, radius * 1.8, radius * 0.3);
+                    
+                    // Draw muzzle
+                    ctx.fillStyle = "rgba(100, 100, 100, 0.8)";
+                    ctx.fillRect(-radius * 1.8, -radius * 0.2, radius * 0.3, radius * 0.4);
+                } else {
+                    // Red team: barrel points right
+                    ctx.fillStyle = "rgba(80, 80, 80, 0.8)";
+                    ctx.fillRect(0, -radius * 0.15, radius * 1.8, radius * 0.3);
+                    
+                    // Draw muzzle
+                    ctx.fillStyle = "rgba(100, 100, 100, 0.8)";
+                    ctx.fillRect(radius * 1.8, -radius * 0.2, radius * 0.3, radius * 0.4);
+                }
                 
                 ctx.restore();
             }
@@ -1081,6 +1282,9 @@
                 this.x = x; this.y = y; this.team = team; this.type = type;
                 const sizeMultiplier = Math.min(canvas.width, canvas.height) / 800;
                 
+                // FIXED: Auto-rotate units based on team
+                this.initialRotation = team === 'red' ? 0 : Math.PI; // Red faces right, Blue faces left
+                
                 if (type === 'soldier') {
                     this.radius = baseUnitSize * sizeMultiplier; this.health = 100; this.maxHealth = 100;
                     this.attackPower = team === 'red' ? 10 : 12; this.attackCooldown = 600;
@@ -1123,8 +1327,10 @@
                     this.cannonRange = (canvas.width * 0.65) * sizeMultiplier;
                     this.lastShot = performance.now() - this.attackCooldown; // START LOADED!
                     this.isLoaded = true; // FIXED: Starts loaded, not reloading!
-                    this.barrelAngle = Math.PI / 4; // 45 degree default
-                    this.rotationAngle = Math.PI / 4; // Body rotation angle (same as barrel)
+                    
+                    // Auto-rotate based on team
+                    this.rotationAngle = team === 'red' ? Math.PI / 4 : (3 * Math.PI) / 4;
+                    this.barrelAngle = this.rotationAngle; // Barrel matches body rotation
                     
                     // Shotgun properties
                     this.pelletCount = 20;
@@ -1134,7 +1340,7 @@
                 }
                 
                 this.lastAttack = 0; this.lastHeal = 0; this.velX = 0; this.velY = 0;
-                this.id = Math.random().toString(36).substr(2, 9); this.facingAngle = 0;
+                this.id = Math.random().toString(36).substr(2, 9); this.facingAngle = this.initialRotation; // FIXED: Auto-facing
                 this.lastHealth = this.health; this.totalDamageDealt = 0; this.kills = 0;
             }
 
@@ -1187,7 +1393,7 @@
                     ctx.arc(this.radius * 0.6, this.radius * 0.3, this.radius * 0.15, 0, Math.PI * 2);
                     ctx.stroke();
                     
-                    // Draw cannon barrel (cast iron)
+                    // Draw cannon barrel (cast iron) - always points forward
                     const barrelGradient = ctx.createLinearGradient(
                         0, -this.radius * 0.15,
                         this.radius * 1.8, -this.radius * 0.15
@@ -1269,8 +1475,20 @@
                         ctx.stroke();
                     }
                 } else {
-                    // Draw other units normally
-                    const gradient = ctx.createRadialGradient(this.x - 3, this.y - 3, 3, this.x, this.y, this.radius);
+                    // Draw other units normally with AUTO-FACING
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    
+                    // Auto-rotate based on team when placed
+                    if (Math.abs(this.velX) < 0.1 && Math.abs(this.velY) < 0.1) {
+                        // When stationary, face toward enemy side
+                        ctx.rotate(this.initialRotation);
+                    } else {
+                        // When moving, face movement direction
+                        ctx.rotate(this.facingAngle);
+                    }
+                    
+                    const gradient = ctx.createRadialGradient(0, 0, 3, 0, 0, this.radius);
                     
                     if (this.team === 'red') {
                         if (this.type === 'tank') { gradient.addColorStop(0, '#ff7979'); gradient.addColorStop(1, '#c0392b'); }
@@ -1286,50 +1504,74 @@
                         else { gradient.addColorStop(0, '#74b9ff'); gradient.addColorStop(1, '#3498db'); }
                     }
                     
-                    ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fillStyle = gradient; ctx.fill();
+                    ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fillStyle = gradient; ctx.fill();
                     
                     if (this.type === 'healer') {
                         ctx.beginPath();
-                        ctx.moveTo(this.x - this.radius/2, this.y);
-                        ctx.lineTo(this.x + this.radius/2, this.y);
-                        ctx.moveTo(this.x, this.y - this.radius/2);
-                        ctx.lineTo(this.x, this.y + this.radius/2);
+                        ctx.moveTo(-this.radius/2, 0);
+                        ctx.lineTo(this.radius/2, 0);
+                        ctx.moveTo(0, -this.radius/2);
+                        ctx.lineTo(0, this.radius/2);
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
                         ctx.lineWidth = 2;
                         ctx.stroke();
                     } else if (this.type === 'musketeer') {
-                        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.facingAngle);
-                        ctx.beginPath(); ctx.moveTo(-this.radius, 0); ctx.lineTo(this.radius, 0);
-                        ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e'; ctx.lineWidth = this.isCharging ? 4 : 3; ctx.stroke();
+                        ctx.beginPath(); 
+                        ctx.moveTo(-this.radius, 0); 
+                        ctx.lineTo(this.radius, 0);
+                        ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e'; 
+                        ctx.lineWidth = this.isCharging ? 4 : 3; 
+                        ctx.stroke();
                         if (this.isCharging) {
                             ctx.beginPath(); ctx.moveTo(this.radius, 0); ctx.lineTo(this.radius + 8, 0);
                             ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 2; ctx.stroke();
                             ctx.beginPath(); ctx.moveTo(this.radius + 8, 0); ctx.lineTo(this.radius + 4, -3); ctx.lineTo(this.radius + 4, 3); ctx.closePath();
                             ctx.fillStyle = '#bdc3c7'; ctx.fill();
-                        } else { ctx.beginPath(); ctx.arc(this.radius, 0, 3, 0, Math.PI * 2); ctx.fillStyle = '#34495e'; ctx.fill(); }
-                        ctx.restore();
-                        if (this.isCharging) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)'; ctx.lineWidth = 2; ctx.stroke(); }
+                        } else { 
+                            ctx.beginPath(); ctx.arc(this.radius, 0, 3, 0, Math.PI * 2); 
+                            ctx.fillStyle = '#34495e'; ctx.fill(); 
+                        }
+                        if (this.isCharging) { 
+                            ctx.restore();
+                            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2); 
+                            ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)'; ctx.lineWidth = 2; ctx.stroke();
+                            return;
+                        }
                     } else if (this.type === 'cavalry') {
-                        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.facingAngle);
                         ctx.beginPath(); ctx.ellipse(0, 0, this.radius * 1.2, this.radius * 0.8, 0, 0, Math.PI * 2);
                         ctx.fillStyle = this.team === 'red' ? '#e74c3c' : '#3498db'; ctx.fill();
                         ctx.beginPath(); ctx.arc(this.radius * 1.2, 0, this.radius * 0.5, 0, Math.PI * 2);
                         ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9'; ctx.fill();
                         if (this.isCharging) {
-                            for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-this.radius * 1.5 - i * 5, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2); ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`; ctx.fill(); }
+                            for (let i = 0; i < 3; i++) { 
+                                ctx.beginPath(); 
+                                ctx.arc(-this.radius * 1.5 - i * 5, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2); 
+                                ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`; 
+                                ctx.fill(); 
+                            }
                             ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; ctx.lineWidth = 2;
                             for (let i = 0; i < 3; i++) {
                                 ctx.beginPath(); ctx.moveTo(-this.radius * 1.5 - i * 8, -this.radius * 0.5); ctx.lineTo(-this.radius * 2 - i * 15, -this.radius * 0.5 - i * 2); ctx.stroke();
                                 ctx.beginPath(); ctx.moveTo(-this.radius * 1.5 - i * 8, this.radius * 0.5); ctx.lineTo(-this.radius * 2 - i * 15, this.radius * 0.5 + i * 2); ctx.stroke();
                             }
-                            if (!this.hasUsedFirstCharge) { ctx.beginPath(); ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)'; ctx.lineWidth = 3; ctx.stroke(); }
+                            if (!this.hasUsedFirstCharge) { 
+                                ctx.restore();
+                                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 15, 0, Math.PI * 2); 
+                                ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)'; ctx.lineWidth = 3; ctx.stroke();
+                                return;
+                            }
                         }
-                        ctx.restore();
                         if (!this.isCharging && this.hasUsedFirstCharge) {
                             const now = performance.now(); const chargeProgress = Math.min(1, (now - this.lastCharge) / this.chargeCooldown);
-                            if (chargeProgress < 1) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress)); ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)'; ctx.lineWidth = 3; ctx.stroke(); }
+                            if (chargeProgress < 1) { 
+                                ctx.restore();
+                                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress)); 
+                                ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)'; ctx.lineWidth = 3; ctx.stroke();
+                                return;
+                            }
                         }
                     }
+                    ctx.restore();
                 }
                 
                 // Health bar for all units
@@ -1346,7 +1588,10 @@
                 // Musketeer reload indicator
                 if (this.type === 'musketeer' && !this.isCharging) {
                     const now = performance.now(); const reloadProgress = Math.min(1, (now - this.lastShot) / this.attackCooldown);
-                    if (reloadProgress < 1) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress)); ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)'; ctx.lineWidth = 3; ctx.stroke(); }
+                    if (reloadProgress < 1) { 
+                        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress)); 
+                        ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)'; ctx.lineWidth = 3; ctx.stroke(); 
+                    }
                 }
             }
 
@@ -1697,11 +1942,20 @@
                 }
             }
 
-            // Cannon firing logic with SHOTGUN mechanics
+            // IMPROVED: Cannon firing with flying cannonball effect!
             fireCannon(target) {
                 const now = performance.now();
                 
-                // Create cannon shot effect
+                // NEW: Create cannonball flying effect
+                cannonballEffects.push(new CannonballEffect(
+                    this.x, 
+                    this.y, 
+                    target.x, 
+                    target.y, 
+                    this.team
+                ));
+                
+                // Also create pellet effect
                 cannonEffects.push(new CannonShotEffect(this.x, this.y, this.barrelAngle, this.team, this.cannonRange));
                 
                 // Calculate enemies in the shotgun cone
@@ -1793,7 +2047,7 @@
 
         function restoreOriginalPlacements() {
             circles = []; attackEffects = []; musketEffects = []; healingEffects = []; damageTexts = [];
-            cannonEffects = [];
+            cannonEffects = []; cannonballEffects = [];
             originalCircles.forEach(original => {
                 const circle = new Circle(original.x, original.y, original.team, original.type);
                 circle.health = original.maxHealth; circle.maxHealth = original.maxHealth;
@@ -1941,7 +2195,7 @@
             circles.push(new Circle(canvas.width - padding - 180, canvas.height*4/5, 'blue', 'cavalry'));
             circles.push(new Circle(canvas.width - padding - 200, canvas.height/2, 'blue', 'cannon'));
             
-            showNotification('Armies placed! Cannons start LOADED!', 'info');
+            showNotification('Armies placed! Units auto-face enemies!', 'info');
         };
         
         playAgainHeaderBtn.onclick = () => { playAgain(); };
@@ -1965,6 +2219,10 @@
             // Update and draw cannon effects
             cannonEffects = cannonEffects.filter(effect => effect.update());
             cannonEffects.forEach(effect => effect.draw());
+            
+            // NEW: Update and draw cannonball effects
+            cannonballEffects = cannonballEffects.filter(effect => effect.update());
+            cannonballEffects.forEach(effect => effect.draw());
 
             for (let c of circles) {
                 let allies = circles.filter(x => x.team === c.team && x.health > 0);
@@ -2004,7 +2262,7 @@
         }
 
         // Initialize
-        showNotification('Cannons improved! Now start LOADED!', 'info');
+        showNotification('Units now auto-face enemies! Cannons show flying cannonballs!', 'info');
         resizeCanvas(); 
         gameLoop();
         updateActiveButton();
