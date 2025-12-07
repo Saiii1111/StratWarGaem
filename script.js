@@ -158,7 +158,7 @@ function initGame() {
         ctx.fillStyle = color;
         ctx.fill();
         
-        // FIXED: Blue team ghost faces toward enemy (right side)
+        // Blue team ghost faces toward enemy (left side)
         const isBlueTeam = team === "blue";
         
         if (type === "healer") {
@@ -171,7 +171,6 @@ function initGame() {
             ctx.lineWidth = 2;
             ctx.stroke();
         } else if (type === "musketeer") {
-            // FIXED: Musketeer faces enemy direction
             ctx.save();
             ctx.translate(mouseX, mouseY);
             // Blue team faces left (toward red), Red team faces right (toward blue)
@@ -190,7 +189,6 @@ function initGame() {
             ctx.fill();
             ctx.restore();
         } else if (type === "cavalry") {
-            // FIXED: Cavalry faces enemy direction
             ctx.save();
             ctx.translate(mouseX, mouseY);
             // Blue team faces left (toward red), Red team faces right (toward blue)
@@ -368,48 +366,125 @@ function initGame() {
                 ctx.lineWidth = 2;
                 ctx.stroke();
             } else if (this.type === 'musketeer') {
-                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.facingAngle);
-                ctx.beginPath(); ctx.moveTo(-this.radius, 0); ctx.lineTo(this.radius, 0);
-                ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e'; ctx.lineWidth = this.isCharging ? 4 : 3; ctx.stroke();
+                ctx.save(); 
+                ctx.translate(this.x, this.y); 
+                ctx.rotate(this.facingAngle);
+                // BLUE TEAM FIX: Musketeers face opposite direction
+                if (this.team === 'blue') {
+                    ctx.rotate(Math.PI); // 180 degrees - faces left toward enemy
+                }
+                ctx.beginPath(); 
+                ctx.moveTo(-this.radius, 0); 
+                ctx.lineTo(this.radius, 0);
+                ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e'; 
+                ctx.lineWidth = this.isCharging ? 4 : 3; 
+                ctx.stroke();
                 if (this.isCharging) {
-                    ctx.beginPath(); ctx.moveTo(this.radius, 0); ctx.lineTo(this.radius + 8, 0);
-                    ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 2; ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(this.radius + 8, 0); ctx.lineTo(this.radius + 4, -3); ctx.lineTo(this.radius + 4, 3); ctx.closePath();
-                    ctx.fillStyle = '#bdc3c7'; ctx.fill();
-                } else { ctx.beginPath(); ctx.arc(this.radius, 0, 3, 0, Math.PI * 2); ctx.fillStyle = '#34495e'; ctx.fill(); }
+                    ctx.beginPath(); 
+                    ctx.moveTo(this.radius, 0); 
+                    ctx.lineTo(this.radius + 8, 0);
+                    ctx.strokeStyle = '#7f8c8d'; 
+                    ctx.lineWidth = 2; 
+                    ctx.stroke();
+                    ctx.beginPath(); 
+                    ctx.moveTo(this.radius + 8, 0); 
+                    ctx.lineTo(this.radius + 4, -3); 
+                    ctx.lineTo(this.radius + 4, 3); 
+                    ctx.closePath();
+                    ctx.fillStyle = '#bdc3c7'; 
+                    ctx.fill();
+                } else { 
+                    ctx.beginPath(); 
+                    ctx.arc(this.radius, 0, 3, 0, Math.PI * 2); 
+                    ctx.fillStyle = '#34495e'; 
+                    ctx.fill(); 
+                }
                 ctx.restore();
-                if (this.isCharging) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)'; ctx.lineWidth = 2; ctx.stroke(); }
+                if (this.isCharging) { 
+                    ctx.beginPath(); 
+                    ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2); 
+                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)'; 
+                    ctx.lineWidth = 2; 
+                    ctx.stroke(); 
+                }
             } else if (this.type === 'cavalry') {
-                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.facingAngle);
-                ctx.beginPath(); ctx.ellipse(0, 0, this.radius * 1.2, this.radius * 0.8, 0, 0, Math.PI * 2);
-                ctx.fillStyle = this.team === 'red' ? '#e74c3c' : '#3498db'; ctx.fill();
-                ctx.beginPath(); ctx.arc(this.radius * 1.2, 0, this.radius * 0.5, 0, Math.PI * 2);
-                ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9'; ctx.fill();
+                ctx.save(); 
+                ctx.translate(this.x, this.y); 
+                ctx.rotate(this.facingAngle);
+                // BLUE TEAM FIX: Cavalry face opposite direction
+                if (this.team === 'blue') {
+                    ctx.rotate(Math.PI); // 180 degrees - faces left toward enemy
+                }
+                ctx.beginPath(); 
+                ctx.ellipse(0, 0, this.radius * 1.2, this.radius * 0.8, 0, 0, Math.PI * 2);
+                ctx.fillStyle = this.team === 'red' ? '#e74c3c' : '#3498db'; 
+                ctx.fill();
+                ctx.beginPath(); 
+                ctx.arc(this.radius * 1.2, 0, this.radius * 0.5, 0, Math.PI * 2);
+                ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9'; 
+                ctx.fill();
                 if (this.isCharging) {
-                    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-this.radius * 1.5 - i * 5, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2); ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`; ctx.fill(); }
-                    ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; ctx.lineWidth = 2;
-                    for (let i = 0; i < 3; i++) {
-                        ctx.beginPath(); ctx.moveTo(-this.radius * 1.5 - i * 8, -this.radius * 0.5); ctx.lineTo(-this.radius * 2 - i * 15, -this.radius * 0.5 - i * 2); ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(-this.radius * 1.5 - i * 8, this.radius * 0.5); ctx.lineTo(-this.radius * 2 - i * 15, this.radius * 0.5 + i * 2); ctx.stroke();
+                    for (let i = 0; i < 3; i++) { 
+                        ctx.beginPath(); 
+                        ctx.arc(-this.radius * 1.5 - i * 5, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2); 
+                        ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`; 
+                        ctx.fill(); 
                     }
-                    if (!this.hasUsedFirstCharge) { ctx.beginPath(); ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)'; ctx.lineWidth = 3; ctx.stroke(); }
+                    ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; 
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 3; i++) {
+                        ctx.beginPath(); 
+                        ctx.moveTo(-this.radius * 1.5 - i * 8, -this.radius * 0.5); 
+                        ctx.lineTo(-this.radius * 2 - i * 15, -this.radius * 0.5 - i * 2); 
+                        ctx.stroke();
+                        ctx.beginPath(); 
+                        ctx.moveTo(-this.radius * 1.5 - i * 8, this.radius * 0.5); 
+                        ctx.lineTo(-this.radius * 2 - i * 15, this.radius * 0.5 + i * 2); 
+                        ctx.stroke();
+                    }
+                    if (!this.hasUsedFirstCharge) { 
+                        ctx.beginPath(); 
+                        ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2); 
+                        ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)'; 
+                        ctx.lineWidth = 3; 
+                        ctx.stroke(); 
+                    }
                 }
                 ctx.restore();
                 if (!this.isCharging && this.hasUsedFirstCharge) {
-                    const now = performance.now(); const chargeProgress = Math.min(1, (now - this.lastCharge) / this.chargeCooldown);
-                    if (chargeProgress < 1) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress)); ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)'; ctx.lineWidth = 3; ctx.stroke(); }
+                    const now = performance.now(); 
+                    const chargeProgress = Math.min(1, (now - this.lastCharge) / this.chargeCooldown);
+                    if (chargeProgress < 1) { 
+                        ctx.beginPath(); 
+                        ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress)); 
+                        ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)'; 
+                        ctx.lineWidth = 3; 
+                        ctx.stroke(); 
+                    }
                 }
             }
             
             const barWidth = this.radius * 2;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth, 4);
-            let healthColor; const healthPercent = this.health / this.maxHealth;
-            if (healthPercent > 0.6) healthColor = '#2ecc71'; else if (healthPercent > 0.3) healthColor = '#f39c12'; else healthColor = '#e74c3c';
-            ctx.fillStyle = healthColor; ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth * healthPercent, 4);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; 
+            ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth, 4);
+            let healthColor; 
+            const healthPercent = this.health / this.maxHealth;
+            if (healthPercent > 0.6) healthColor = '#2ecc71'; 
+            else if (healthPercent > 0.3) healthColor = '#f39c12'; 
+            else healthColor = '#e74c3c';
+            ctx.fillStyle = healthColor; 
+            ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth * healthPercent, 4);
             
             if (this.type === 'musketeer' && !this.isCharging) {
-                const now = performance.now(); const reloadProgress = Math.min(1, (now - this.lastShot) / this.attackCooldown);
-                if (reloadProgress < 1) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress)); ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)'; ctx.lineWidth = 3; ctx.stroke(); }
+                const now = performance.now(); 
+                const reloadProgress = Math.min(1, (now - this.lastShot) / this.attackCooldown);
+                if (reloadProgress < 1) { 
+                    ctx.beginPath(); 
+                    ctx.arc(this.x, this.y, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress)); 
+                    ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)'; 
+                    ctx.lineWidth = 3; 
+                    ctx.stroke(); 
+                }
             }
         }
 
