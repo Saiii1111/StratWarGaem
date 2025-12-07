@@ -173,13 +173,21 @@ function initGame() {
         } else if (type === "musketeer") {
             ctx.save();
             ctx.translate(mouseX, mouseY);
-            // Blue team faces left (toward red), Red team faces right (toward blue)
+            // Blue team faces left (toward enemy), Red team faces right (toward enemy)
             if (isBlueTeam) {
                 ctx.rotate(Math.PI); // 180 degrees - faces left
+            } else {
+                ctx.rotate(0); // 0 degrees - faces right
             }
             ctx.beginPath();
-            ctx.moveTo(-radius, 0);
-            ctx.lineTo(radius, 0);
+            // Blue team musket points left, Red team points right
+            if (isBlueTeam) {
+                ctx.moveTo(radius, 0);  // Start at right (back)
+                ctx.lineTo(-radius, 0); // End at left (front)
+            } else {
+                ctx.moveTo(-radius, 0); // Start at left (back)
+                ctx.lineTo(radius, 0);  // End at right (front)
+            }
             ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
             ctx.lineWidth = 3;
             ctx.stroke();
@@ -193,9 +201,11 @@ function initGame() {
         } else if (type === "cavalry") {
             ctx.save();
             ctx.translate(mouseX, mouseY);
-            // Blue team faces left (toward red), Red team faces right (toward blue)
+            // Blue team faces left (toward enemy), Red team faces right (toward enemy)
             if (isBlueTeam) {
                 ctx.rotate(Math.PI); // 180 degrees - faces left
+            } else {
+                ctx.rotate(0); // 0 degrees - faces right
             }
             // Horse head at the FRONT (right for red, left for blue)
             let headX = isBlueTeam ? -radius * 0.7 : radius * 0.7;
