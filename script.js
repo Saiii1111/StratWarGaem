@@ -279,11 +279,15 @@ function initGame() {
             
             if (type === 'soldier') {
                 this.radius = baseUnitSize * sizeMultiplier; this.health = 100; this.maxHealth = 100;
-                this.attackPower = team === 'red' ? 10 : 12; this.attackCooldown = 600;
+                // FIXED: Same damage for both teams - BALANCED!
+                this.attackPower = 11; // Was: team === 'red' ? 10 : 12
+                this.attackCooldown = 600;
                 this.maxSpeed = 1.8 * sizeMultiplier; this.turnSpeed = 0.15;
             } else if (type === 'tank') {
                 this.radius = baseUnitSize * 1.4 * sizeMultiplier; this.health = 200; this.maxHealth = 200;
-                this.attackPower = team === 'red' ? 18 : 20; this.attackCooldown = 800;
+                // FIXED: Same damage for both teams - BALANCED!
+                this.attackPower = 19; // Was: team === 'red' ? 18 : 20
+                this.attackCooldown = 800;
                 this.maxSpeed = 1.0 * sizeMultiplier; this.turnSpeed = 0.1;
             } else if (type === 'healer') {
                 this.radius = baseUnitSize * sizeMultiplier; this.health = 80; this.maxHealth = 80;
@@ -298,7 +302,9 @@ function initGame() {
                 this.isCharging = false; this.missChance = 0.35; this.lastShot = 0;
             } else if (type === 'cavalry') {
                 this.radius = baseUnitSize * 1.1 * sizeMultiplier; this.health = 120; this.maxHealth = 120;
-                this.attackPower = team === 'red' ? 15 : 17; this.attackCooldown = 500;
+                // FIXED: Same damage for both teams - BALANCED!
+                this.attackPower = 16; // Was: team === 'red' ? 15 : 17
+                this.attackCooldown = 500;
                 this.maxSpeed = 2.8 * sizeMultiplier; this.turnSpeed = 0.08;
                 this.baseSpeed = 1.2 * sizeMultiplier; this.currentSpeed = this.baseSpeed;
                 this.isCharging = false; this.chargeSpeed = this.maxSpeed; this.chargeDamageMultiplier = 1.0;
