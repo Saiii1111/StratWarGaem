@@ -158,6 +158,9 @@ function initGame() {
         ctx.fillStyle = color;
         ctx.fill();
         
+        // FIXED: Blue team ghost faces toward enemy (right side)
+        const isBlueTeam = team === "blue";
+        
         if (type === "healer") {
             ctx.beginPath();
             ctx.moveTo(mouseX - radius/2, mouseY);
@@ -168,21 +171,37 @@ function initGame() {
             ctx.lineWidth = 2;
             ctx.stroke();
         } else if (type === "musketeer") {
+            // FIXED: Musketeer faces enemy direction
+            ctx.save();
+            ctx.translate(mouseX, mouseY);
+            // Blue team faces left (toward red), Red team faces right (toward blue)
+            if (isBlueTeam) {
+                ctx.rotate(Math.PI); // 180 degrees - faces left
+            }
             ctx.beginPath();
-            ctx.moveTo(mouseX - radius, mouseY);
-            ctx.lineTo(mouseX + radius, mouseY);
+            ctx.moveTo(-radius, 0);
+            ctx.lineTo(radius, 0);
             ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
             ctx.lineWidth = 3;
             ctx.stroke();
             ctx.beginPath();
-            ctx.arc(mouseX + radius, mouseY, 3, 0, Math.PI * 2);
+            ctx.arc(radius, 0, 3, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
             ctx.fill();
+            ctx.restore();
         } else if (type === "cavalry") {
+            // FIXED: Cavalry faces enemy direction
+            ctx.save();
+            ctx.translate(mouseX, mouseY);
+            // Blue team faces left (toward red), Red team faces right (toward blue)
+            if (isBlueTeam) {
+                ctx.rotate(Math.PI); // 180 degrees - faces left
+            }
             ctx.beginPath();
-            ctx.arc(mouseX + radius * 0.7, mouseY, radius * 0.4, 0, Math.PI * 2);
+            ctx.arc(radius * 0.7, 0, radius * 0.4, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
             ctx.fill();
+            ctx.restore();
         }
     }
 
