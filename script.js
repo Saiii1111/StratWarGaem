@@ -1,14 +1,14 @@
 // ============================================
-// GAME BALANCE SETTINGS - EASY TO EDIT!
+// UNIT SETTINGS - EASY TO EDIT!
 // ============================================
 
 const UNIT_SETTINGS = {
     soldier: {
         health: 100,
         attackPower: 11,
-        attackCooldown: 600, // ms
-        radius: 1.0, // multiplier
-        maxSpeed: 1.8,
+        attackCooldown: 600,
+        radiusMultiplier: 1.0,
+        speedMultiplier: 1.8,
         turnSpeed: 0.15,
         colorRed: ['#ff6b6b', '#e74c3c'],
         colorBlue: ['#74b9ff', '#3498db']
@@ -17,9 +17,9 @@ const UNIT_SETTINGS = {
         health: 200,
         attackPower: 19,
         attackCooldown: 800,
-        radius: 1.4,
-        maxSpeed: 1.0,
-        turnSpeed: 0.10,
+        radiusMultiplier: 1.4,
+        speedMultiplier: 1.0,
+        turnSpeed: 0.1,
         colorRed: ['#ff7979', '#c0392b'],
         colorBlue: ['#7ed6df', '#2980b9']
     },
@@ -28,8 +28,8 @@ const UNIT_SETTINGS = {
         healPower: 6,
         healCooldown: 300,
         healRange: 60,
-        radius: 1.0,
-        maxSpeed: 1.5,
+        radiusMultiplier: 1.0,
+        speedMultiplier: 1.5,
         turnSpeed: 0.12,
         colorRed: ['#f8c471', '#e67e22'],
         colorBlue: ['#81ecec', '#00cec9']
@@ -38,8 +38,8 @@ const UNIT_SETTINGS = {
         health: 60,
         attackPower: 25,
         attackCooldown: 1200,
-        radius: 0.9,
-        maxSpeed: 1.6,
+        radiusMultiplier: 0.9,
+        speedMultiplier: 1.6,
         turnSpeed: 0.13,
         missChance: 0.35,
         shootingRange: 150,
@@ -51,9 +51,9 @@ const UNIT_SETTINGS = {
         health: 120,
         attackPower: 16,
         attackCooldown: 500,
-        radius: 1.1,
-        maxSpeed: 2.8,
-        baseSpeed: 1.2,
+        radiusMultiplier: 1.1,
+        speedMultiplier: 2.8,
+        baseSpeedMultiplier: 1.2,
         turnSpeed: 0.08,
         chargeCooldown: 25000,
         chargeDuration: 2000,
@@ -64,7 +64,7 @@ const UNIT_SETTINGS = {
 };
 
 // ============================================
-// MAIN GAME CODE
+// MAIN GAME CODE (DON'T EDIT BELOW UNLESS YOU KNOW WHAT YOU'RE DOING)
 // ============================================
 
 // Wait for DOM to be fully loaded
@@ -204,11 +204,12 @@ function initGame() {
     function drawGhost() {
         if (!showGhost || placingMode === "delete") return;
         
-        let color, radius = baseUnitSize * UNIT_SETTINGS[placingMode].radius * (Math.min(canvas.width, canvas.height) / 800);
+        const settings = UNIT_SETTINGS[placingMode];
+        let radius = baseUnitSize * settings.radiusMultiplier * (Math.min(canvas.width, canvas.height) / 800);
         let team = mouseX < canvas.width/2 ? "red" : "blue";
         let type = placingMode;
         
-        color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
+        let color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
             
         const withinBounds = mouseX > mapPadding + radius && mouseX < canvas.width - mapPadding - radius && mouseY > mapPadding + radius && mouseY < canvas.height - mapPadding - radius;
         let blocked = circles.some(c => Math.hypot(c.x - mouseX, c.y - mouseY) < (c.radius + radius) * 0.8);
@@ -220,7 +221,6 @@ function initGame() {
         ctx.fillStyle = color;
         ctx.fill();
         
-        // Blue team ghost faces toward enemy (left side)
         const isBlueTeam = team === "blue";
         
         if (type === "healer") {
@@ -235,27 +235,20 @@ function initGame() {
         } else if (type === "musketeer") {
             ctx.save();
             ctx.translate(mouseX, mouseY);
-            // BLUE TEAM FACES LEFT, RED TEAM FACES RIGHT
             if (isBlueTeam) {
-                ctx.rotate(Math.PI); // 180 degrees - faces LEFT
-            } else {
-                ctx.rotate(0); // 0 degrees - faces RIGHT
+                ctx.rotate(Math.PI);
             }
             ctx.beginPath();
-            // Musket orientation
             if (isBlueTeam) {
-                // Blue: musket points LEFT (front is left)
-                ctx.moveTo(radius * 0.6, 0);  // Start at right (back)
-                ctx.lineTo(-radius * 0.8, 0); // End at left (front)
+                ctx.moveTo(radius * 0.6, 0);
+                ctx.lineTo(-radius * 0.8, 0);
             } else {
-                // Red: musket points RIGHT (front is right)
-                ctx.moveTo(-radius * 0.6, 0); // Start at left (back)
-                ctx.lineTo(radius * 0.8, 0);  // End at right (front)
+                ctx.moveTo(-radius * 0.6, 0);
+                ctx.lineTo(radius * 0.8, 0);
             }
             ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
             ctx.lineWidth = 3;
             ctx.stroke();
-            // Barrel tip at the FRONT
             let barrelX = isBlueTeam ? -radius * 0.8 : radius * 0.8;
             ctx.beginPath();
             ctx.arc(barrelX, 0, 3, 0, Math.PI * 2);
@@ -265,13 +258,9 @@ function initGame() {
         } else if (type === "cavalry") {
             ctx.save();
             ctx.translate(mouseX, mouseY);
-            // BLUE TEAM FACES LEFT, RED TEAM FACES RIGHT
             if (isBlueTeam) {
-                ctx.rotate(Math.PI); // 180 degrees - faces LEFT
-            } else {
-                ctx.rotate(0); // 0 degrees - faces RIGHT
+                ctx.rotate(Math.PI);
             }
-            // Horse head at the FRONT
             let headX = isBlueTeam ? -radius * 0.8 : radius * 0.8;
             ctx.beginPath();
             ctx.arc(headX, 0, radius * 0.4, 0, Math.PI * 2);
@@ -373,15 +362,14 @@ function initGame() {
             const sizeMultiplier = Math.min(canvas.width, canvas.height) / 800;
             const settings = UNIT_SETTINGS[type];
             
-            this.radius = baseUnitSize * settings.radius * sizeMultiplier;
+            this.radius = baseUnitSize * settings.radiusMultiplier * sizeMultiplier;
             this.health = settings.health;
             this.maxHealth = settings.health;
             this.attackPower = settings.attackPower || 0;
             this.attackCooldown = settings.attackCooldown || 0;
-            this.maxSpeed = settings.maxSpeed * sizeMultiplier;
+            this.maxSpeed = settings.speedMultiplier * sizeMultiplier;
             this.turnSpeed = settings.turnSpeed;
             
-            // Special properties
             if (type === 'healer') {
                 this.healPower = settings.healPower;
                 this.healCooldown = settings.healCooldown;
@@ -394,7 +382,7 @@ function initGame() {
                 this.missChance = settings.missChance;
                 this.lastShot = 0;
             } else if (type === 'cavalry') {
-                this.baseSpeed = settings.baseSpeed * sizeMultiplier;
+                this.baseSpeed = settings.baseSpeedMultiplier * sizeMultiplier;
                 this.currentSpeed = this.baseSpeed;
                 this.isCharging = false;
                 this.chargeSpeed = this.maxSpeed;
@@ -417,26 +405,16 @@ function initGame() {
         }
 
         draw() {
-            if (Math.abs(this.velX) > 0.1 || Math.abs(this.velY) > 0.1) {
-                this.facingAngle = Math.atan2(this.velY, this.velX);
-            }
-            
-            const gradient = ctx.createRadialGradient(
-                this.x - 3, this.y - 3, 3, 
-                this.x, this.y, this.radius
-            );
+            if (Math.abs(this.velX) > 0.1 || Math.abs(this.velY) > 0.1) this.facingAngle = Math.atan2(this.velY, this.velX);
+            const gradient = ctx.createRadialGradient(this.x - 3, this.y - 3, 3, this.x, this.y, this.radius);
             
             const settings = UNIT_SETTINGS[this.type];
             const colors = this.team === 'red' ? settings.colorRed : settings.colorBlue;
             gradient.addColorStop(0, colors[0]);
             gradient.addColorStop(1, colors[1]);
             
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fillStyle = gradient; ctx.fill();
             
-            // Special unit drawings
             if (this.type === 'healer') {
                 ctx.beginPath();
                 ctx.moveTo(this.x - this.radius/2, this.y);
@@ -447,166 +425,148 @@ function initGame() {
                 ctx.lineWidth = 2;
                 ctx.stroke();
             } else if (this.type === 'musketeer') {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                
-                // BLUE TEAM FACES LEFT, RED TEAM FACES RIGHT
+                ctx.save(); 
+                ctx.translate(this.x, this.y); 
                 if (this.team === 'blue') {
                     ctx.rotate(this.facingAngle + Math.PI);
                 } else {
                     ctx.rotate(this.facingAngle);
                 }
                 
-                // Draw musket
-                let musketStart = this.team === 'blue' ? this.radius * 0.6 : -this.radius * 0.6;
-                let musketEnd = this.team === 'blue' ? -this.radius * 0.8 : this.radius * 0.8;
-                let barrelPos = this.team === 'blue' ? -this.radius * 0.8 : this.radius * 0.8;
+                let musketStart = this.team === 'blue' ? this.radius : -this.radius;
+                let musketEnd = this.team === 'blue' ? -this.radius : this.radius;
+                let barrelPos = this.team === 'blue' ? -this.radius : this.radius;
                 
-                ctx.beginPath();
-                ctx.moveTo(musketStart, 0);
+                ctx.beginPath(); 
+                ctx.moveTo(musketStart, 0); 
                 ctx.lineTo(musketEnd, 0);
-                ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e';
-                ctx.lineWidth = this.isCharging ? 4 : 3;
+                ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e'; 
+                ctx.lineWidth = this.isCharging ? 4 : 3; 
                 ctx.stroke();
                 
                 if (this.isCharging) {
-                    ctx.beginPath();
-                    ctx.moveTo(barrelPos, 0);
+                    ctx.beginPath(); 
+                    ctx.moveTo(barrelPos, 0); 
                     ctx.lineTo(barrelPos + (this.team === 'blue' ? -8 : 8), 0);
-                    ctx.strokeStyle = '#7f8c8d';
-                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#7f8c8d'; 
+                    ctx.lineWidth = 2; 
                     ctx.stroke();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(barrelPos + (this.team === 'blue' ? -8 : 8), 0);
-                    ctx.lineTo(barrelPos + (this.team === 'blue' ? -4 : 4), -3);
-                    ctx.lineTo(barrelPos + (this.team === 'blue' ? -4 : 4), 3);
+                    ctx.beginPath(); 
+                    ctx.moveTo(barrelPos + (this.team === 'blue' ? -8 : 8), 0); 
+                    ctx.lineTo(barrelPos + (this.team === 'blue' ? -4 : 4), -3); 
+                    ctx.lineTo(barrelPos + (this.team === 'blue' ? -4 : 4), 3); 
                     ctx.closePath();
-                    ctx.fillStyle = '#bdc3c7';
+                    ctx.fillStyle = '#bdc3c7'; 
                     ctx.fill();
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(barrelPos, 0, 3, 0, Math.PI * 2);
-                    ctx.fillStyle = '#34495e';
-                    ctx.fill();
+                } else { 
+                    ctx.beginPath(); 
+                    ctx.arc(barrelPos, 0, 3, 0, Math.PI * 2); 
+                    ctx.fillStyle = '#34495e'; 
+                    ctx.fill(); 
                 }
                 ctx.restore();
                 
-                if (this.isCharging) {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
-                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
+                if (this.isCharging) { 
+                    ctx.beginPath(); 
+                    ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2); 
+                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)'; 
+                    ctx.lineWidth = 2; 
+                    ctx.stroke(); 
                 }
             } else if (this.type === 'cavalry') {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                
+                ctx.save(); 
+                ctx.translate(this.x, this.y); 
                 if (this.team === 'blue') {
                     ctx.rotate(this.facingAngle + Math.PI);
                 } else {
                     ctx.rotate(this.facingAngle);
                 }
                 
-                // Draw cavalry
                 let bodyWidth = this.radius * 1.2;
                 let bodyHeight = this.radius * 0.8;
                 let headX = this.team === 'blue' ? -bodyWidth : bodyWidth;
                 
-                ctx.beginPath();
+                ctx.beginPath(); 
                 ctx.ellipse(0, 0, bodyWidth, bodyHeight, 0, 0, Math.PI * 2);
-                ctx.fillStyle = this.team === 'red' ? '#e74c3c' : '#3498db';
+                ctx.fillStyle = this.team === 'red' ? '#e74c3c' : '#3498db'; 
                 ctx.fill();
                 
-                // Horse head
-                ctx.beginPath();
+                ctx.beginPath(); 
                 ctx.arc(headX, 0, this.radius * 0.5, 0, Math.PI * 2);
-                ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9';
+                ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9'; 
                 ctx.fill();
                 
                 if (this.isCharging) {
-                    // Charge effects
                     let dustX = this.team === 'blue' ? bodyWidth : -bodyWidth;
-                    for (let i = 0; i < 3; i++) {
+                    for (let i = 0; i < 3; i++) { 
                         let dustOffset = this.team === 'blue' ? bodyWidth + i * 5 : -bodyWidth - i * 5;
-                        ctx.beginPath();
-                        ctx.arc(dustOffset, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2);
-                        ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`;
-                        ctx.fill();
+                        ctx.beginPath(); 
+                        ctx.arc(dustOffset, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2); 
+                        ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`; 
+                        ctx.fill(); 
                     }
-                    
-                    ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`;
+                    ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`; 
                     ctx.lineWidth = 2;
                     for (let i = 0; i < 3; i++) {
                         let startX = this.team === 'blue' ? bodyWidth + i * 8 : -bodyWidth - i * 8;
                         let endX = this.team === 'blue' ? bodyWidth * 1.5 + i * 15 : -bodyWidth * 1.5 - i * 15;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(startX, -this.radius * 0.5);
-                        ctx.lineTo(endX, -this.radius * 0.5 - i * 2);
+                        ctx.beginPath(); 
+                        ctx.moveTo(startX, -this.radius * 0.5); 
+                        ctx.lineTo(endX, -this.radius * 0.5 - i * 2); 
                         ctx.stroke();
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(startX, this.radius * 0.5);
-                        ctx.lineTo(endX, this.radius * 0.5 + i * 2);
+                        ctx.beginPath(); 
+                        ctx.moveTo(startX, this.radius * 0.5); 
+                        ctx.lineTo(endX, this.radius * 0.5 + i * 2); 
                         ctx.stroke();
                     }
-                    
-                    if (!this.hasUsedFirstCharge) {
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2);
-                        ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
+                    if (!this.hasUsedFirstCharge) { 
+                        ctx.beginPath(); 
+                        ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2); 
+                        ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)'; 
+                        ctx.lineWidth = 3; 
+                        ctx.stroke(); 
                     }
                 }
                 ctx.restore();
                 
                 if (!this.isCharging && this.hasUsedFirstCharge) {
-                    const now = performance.now();
+                    const now = performance.now(); 
                     const chargeProgress = Math.min(1, (now - this.lastCharge) / this.chargeCooldown);
-                    if (chargeProgress < 1) {
-                        ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress));
-                        ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)';
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
+                    if (chargeProgress < 1) { 
+                        ctx.beginPath(); 
+                        ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress)); 
+                        ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)'; 
+                        ctx.lineWidth = 3; 
+                        ctx.stroke(); 
                     }
                 }
             }
             
-            // Health bar for all units
             const barWidth = this.radius * 2;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; 
             ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth, 4);
-            
+            let healthColor; 
             const healthPercent = this.health / this.maxHealth;
-            let healthColor;
-            if (healthPercent > 0.6) healthColor = '#2ecc71';
-            else if (healthPercent > 0.3) healthColor = '#f39c12';
+            if (healthPercent > 0.6) healthColor = '#2ecc71'; 
+            else if (healthPercent > 0.3) healthColor = '#f39c12'; 
             else healthColor = '#e74c3c';
-            
-            ctx.fillStyle = healthColor;
+            ctx.fillStyle = healthColor; 
             ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth * healthPercent, 4);
             
-            // Reload indicator for musketeer
             if (this.type === 'musketeer' && !this.isCharging) {
-                const now = performance.now();
+                const now = performance.now(); 
                 const reloadProgress = Math.min(1, (now - this.lastShot) / this.attackCooldown);
-                if (reloadProgress < 1) {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress));
-                    ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)';
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
+                if (reloadProgress < 1) { 
+                    ctx.beginPath(); 
+                    ctx.arc(this.x, this.y, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress)); 
+                    ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)'; 
+                    ctx.lineWidth = 3; 
+                    ctx.stroke(); 
                 }
             }
         }
 
-        distanceTo(other) {
-            return Math.hypot(this.x - other.x, this.y - other.y);
-        }
+        distanceTo(other) { return Math.hypot(this.x - other.x, this.y - other.y); }
 
         applySeparation(alliesAndEnemies) {
             let pushX = 0, pushY = 0;
@@ -944,7 +904,8 @@ function initGame() {
 
     function handleCanvasClick(x, y) {
         if (gameRunning) return;
-        const radius = baseUnitSize * UNIT_SETTINGS[placingMode].radius * (Math.min(canvas.width, canvas.height) / 800);
+        const settings = UNIT_SETTINGS[placingMode];
+        const radius = baseUnitSize * settings.radiusMultiplier * (Math.min(canvas.width, canvas.height) / 800);
         const withinBounds = x > mapPadding + radius && x < canvas.width - mapPadding - radius && y > mapPadding + radius && y < canvas.height - mapPadding - radius;
         if (!withinBounds) { showNotification('Cannot place outside battlefield', 'warning'); return; }
 
@@ -1003,7 +964,6 @@ function initGame() {
             }
             
             if (!gameRunning) {
-                // Start game
                 if (battleStartTime === 0) saveOriginalPlacements();
                 gameRunning = true; 
                 showGhost = false;
@@ -1011,7 +971,6 @@ function initGame() {
                 showNotification("Battle started", 'info');
                 gameStatusEl.textContent = "Running";
             } else {
-                // Pause game
                 gameRunning = false; 
                 showGhost = true; 
                 showNotification("Battle paused", 'warning');
