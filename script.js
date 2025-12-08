@@ -1,6 +1,74 @@
+// ============================================
+// GAME BALANCE SETTINGS - EASY TO EDIT!
+// ============================================
+
+const UNIT_SETTINGS = {
+    soldier: {
+        health: 100,
+        attackPower: 11,
+        attackCooldown: 600, // ms
+        radius: 1.0, // multiplier
+        maxSpeed: 1.8,
+        turnSpeed: 0.15,
+        colorRed: ['#ff6b6b', '#e74c3c'],
+        colorBlue: ['#74b9ff', '#3498db']
+    },
+    tank: {
+        health: 200,
+        attackPower: 19,
+        attackCooldown: 800,
+        radius: 1.4,
+        maxSpeed: 1.0,
+        turnSpeed: 0.10,
+        colorRed: ['#ff7979', '#c0392b'],
+        colorBlue: ['#7ed6df', '#2980b9']
+    },
+    healer: {
+        health: 80,
+        healPower: 6,
+        healCooldown: 300,
+        healRange: 60,
+        radius: 1.0,
+        maxSpeed: 1.5,
+        turnSpeed: 0.12,
+        colorRed: ['#f8c471', '#e67e22'],
+        colorBlue: ['#81ecec', '#00cec9']
+    },
+    musketeer: {
+        health: 60,
+        attackPower: 25,
+        attackCooldown: 1200,
+        radius: 0.9,
+        maxSpeed: 1.6,
+        turnSpeed: 0.13,
+        missChance: 0.35,
+        shootingRange: 150,
+        bayonetRange: 60,
+        colorRed: ['#ff9f80', '#d35400'],
+        colorBlue: ['#80bfff', '#1a5276']
+    },
+    cavalry: {
+        health: 120,
+        attackPower: 16,
+        attackCooldown: 500,
+        radius: 1.1,
+        maxSpeed: 2.8,
+        baseSpeed: 1.2,
+        turnSpeed: 0.08,
+        chargeCooldown: 25000,
+        chargeDuration: 2000,
+        minChargeDistance: 50,
+        colorRed: ['#e74c3c', '#c0392b'],
+        colorBlue: ['#3498db', '#1a5276']
+    }
+};
+
+// ============================================
+// MAIN GAME CODE
+// ============================================
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize game
     initGame();
 });
 
@@ -44,8 +112,6 @@ function initGame() {
     let highestSingleDamage = 0;
 
     const mapPadding = 20;
-    const MUSKET_RANGE = 150;
-    const BAYONET_RANGE = 60;
 
     // Initialize canvas size
     function resizeCanvas() {
@@ -138,15 +204,11 @@ function initGame() {
     function drawGhost() {
         if (!showGhost || placingMode === "delete") return;
         
-        let color, radius = baseUnitSize * (Math.min(canvas.width, canvas.height) / 800);
+        let color, radius = baseUnitSize * UNIT_SETTINGS[placingMode].radius * (Math.min(canvas.width, canvas.height) / 800);
         let team = mouseX < canvas.width/2 ? "red" : "blue";
         let type = placingMode;
         
-        if (placingMode === "soldier") { type = "soldier"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; }
-        else if (placingMode === "tank") { type = "tank"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; radius = baseUnitSize * 1.3 * (Math.min(canvas.width, canvas.height) / 800); }
-        else if (placingMode === "healer") { type = "healer"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; }
-        else if (placingMode === "musketeer") { type = "musketeer"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; radius = baseUnitSize * 0.9 * (Math.min(canvas.width, canvas.height) / 800); }
-        else if (placingMode === "cavalry") { type = "cavalry"; color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)"; radius = baseUnitSize * 1.1 * (Math.min(canvas.width, canvas.height) / 800); }
+        color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
             
         const withinBounds = mouseX > mapPadding + radius && mouseX < canvas.width - mapPadding - radius && mouseY > mapPadding + radius && mouseY < canvas.height - mapPadding - radius;
         let blocked = circles.some(c => Math.hypot(c.x - mouseX, c.y - mouseY) < (c.radius + radius) * 0.8);
@@ -305,6 +367,528 @@ function initGame() {
         }
     }
 
+    class Circle {
+        constructor(x, y, team, type = 'soldier') {
+            this.x = x; this.y = y; this.team = team; this.type = type;
+            const sizeMultiplier = Math.min(canvas.width, canvas.height) / 800;
+            const settings = UNIT_SETTINGS[type];
+            
+            this.radius = baseUnitSize * settings.radius * sizeMultiplier;
+            this.health = settings.health;
+            this.maxHealth = settings.health;
+            this.attackPower = settings.attackPower || 0;
+            this.attackCooldown = settings.attackCooldown || 0;
+            this.maxSpeed = settings.maxSpeed * sizeMultiplier;
+            this.turnSpeed = settings.turnSpeed;
+            
+            // Special properties
+            if (type === 'healer') {
+                this.healPower = settings.healPower;
+                this.healCooldown = settings.healCooldown;
+                this.healRange = settings.healRange;
+                this.currentHealTarget = null;
+            } else if (type === 'musketeer') {
+                this.shootingRange = settings.shootingRange * sizeMultiplier;
+                this.bayonetRange = settings.bayonetRange * sizeMultiplier;
+                this.isCharging = false;
+                this.missChance = settings.missChance;
+                this.lastShot = 0;
+            } else if (type === 'cavalry') {
+                this.baseSpeed = settings.baseSpeed * sizeMultiplier;
+                this.currentSpeed = this.baseSpeed;
+                this.isCharging = false;
+                this.chargeSpeed = this.maxSpeed;
+                this.chargeDamageMultiplier = 1.0;
+                this.chargeCooldown = settings.chargeCooldown;
+                this.lastCharge = 0;
+                this.chargeDuration = settings.chargeDuration;
+                this.chargeStartTime = 0;
+                this.chargeTarget = null;
+                this.minChargeDistance = settings.minChargeDistance;
+                this.currentVelocity = 0;
+                this.chargeBoost = 0;
+                this.hasUsedFirstCharge = false;
+                this.lastCharge = performance.now() - this.chargeCooldown - 10000;
+            }
+            
+            this.lastAttack = 0; this.lastHeal = 0; this.velX = 0; this.velY = 0;
+            this.id = Math.random().toString(36).substr(2, 9); this.facingAngle = team === 'blue' ? Math.PI : 0;
+            this.lastHealth = this.health; this.totalDamageDealt = 0; this.kills = 0;
+        }
+
+        draw() {
+            if (Math.abs(this.velX) > 0.1 || Math.abs(this.velY) > 0.1) {
+                this.facingAngle = Math.atan2(this.velY, this.velX);
+            }
+            
+            const gradient = ctx.createRadialGradient(
+                this.x - 3, this.y - 3, 3, 
+                this.x, this.y, this.radius
+            );
+            
+            const settings = UNIT_SETTINGS[this.type];
+            const colors = this.team === 'red' ? settings.colorRed : settings.colorBlue;
+            gradient.addColorStop(0, colors[0]);
+            gradient.addColorStop(1, colors[1]);
+            
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Special unit drawings
+            if (this.type === 'healer') {
+                ctx.beginPath();
+                ctx.moveTo(this.x - this.radius/2, this.y);
+                ctx.lineTo(this.x + this.radius/2, this.y);
+                ctx.moveTo(this.x, this.y - this.radius/2);
+                ctx.lineTo(this.x, this.y + this.radius/2);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else if (this.type === 'musketeer') {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // BLUE TEAM FACES LEFT, RED TEAM FACES RIGHT
+                if (this.team === 'blue') {
+                    ctx.rotate(this.facingAngle + Math.PI);
+                } else {
+                    ctx.rotate(this.facingAngle);
+                }
+                
+                // Draw musket
+                let musketStart = this.team === 'blue' ? this.radius * 0.6 : -this.radius * 0.6;
+                let musketEnd = this.team === 'blue' ? -this.radius * 0.8 : this.radius * 0.8;
+                let barrelPos = this.team === 'blue' ? -this.radius * 0.8 : this.radius * 0.8;
+                
+                ctx.beginPath();
+                ctx.moveTo(musketStart, 0);
+                ctx.lineTo(musketEnd, 0);
+                ctx.strokeStyle = this.isCharging ? '#2c3e50' : '#34495e';
+                ctx.lineWidth = this.isCharging ? 4 : 3;
+                ctx.stroke();
+                
+                if (this.isCharging) {
+                    ctx.beginPath();
+                    ctx.moveTo(barrelPos, 0);
+                    ctx.lineTo(barrelPos + (this.team === 'blue' ? -8 : 8), 0);
+                    ctx.strokeStyle = '#7f8c8d';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(barrelPos + (this.team === 'blue' ? -8 : 8), 0);
+                    ctx.lineTo(barrelPos + (this.team === 'blue' ? -4 : 4), -3);
+                    ctx.lineTo(barrelPos + (this.team === 'blue' ? -4 : 4), 3);
+                    ctx.closePath();
+                    ctx.fillStyle = '#bdc3c7';
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(barrelPos, 0, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = '#34495e';
+                    ctx.fill();
+                }
+                ctx.restore();
+                
+                if (this.isCharging) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            } else if (this.type === 'cavalry') {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                if (this.team === 'blue') {
+                    ctx.rotate(this.facingAngle + Math.PI);
+                } else {
+                    ctx.rotate(this.facingAngle);
+                }
+                
+                // Draw cavalry
+                let bodyWidth = this.radius * 1.2;
+                let bodyHeight = this.radius * 0.8;
+                let headX = this.team === 'blue' ? -bodyWidth : bodyWidth;
+                
+                ctx.beginPath();
+                ctx.ellipse(0, 0, bodyWidth, bodyHeight, 0, 0, Math.PI * 2);
+                ctx.fillStyle = this.team === 'red' ? '#e74c3c' : '#3498db';
+                ctx.fill();
+                
+                // Horse head
+                ctx.beginPath();
+                ctx.arc(headX, 0, this.radius * 0.5, 0, Math.PI * 2);
+                ctx.fillStyle = this.team === 'red' ? '#c0392b' : '#2980b9';
+                ctx.fill();
+                
+                if (this.isCharging) {
+                    // Charge effects
+                    let dustX = this.team === 'blue' ? bodyWidth : -bodyWidth;
+                    for (let i = 0; i < 3; i++) {
+                        let dustOffset = this.team === 'blue' ? bodyWidth + i * 5 : -bodyWidth - i * 5;
+                        ctx.beginPath();
+                        ctx.arc(dustOffset, 0, this.radius * 0.3 * (1 - i * 0.3), 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(149, 165, 166, ${0.7 - i * 0.2})`;
+                        ctx.fill();
+                    }
+                    
+                    ctx.strokeStyle = `rgba(255, 255, 255, 0.6)`;
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 3; i++) {
+                        let startX = this.team === 'blue' ? bodyWidth + i * 8 : -bodyWidth - i * 8;
+                        let endX = this.team === 'blue' ? bodyWidth * 1.5 + i * 15 : -bodyWidth * 1.5 - i * 15;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(startX, -this.radius * 0.5);
+                        ctx.lineTo(endX, -this.radius * 0.5 - i * 2);
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(startX, this.radius * 0.5);
+                        ctx.lineTo(endX, this.radius * 0.5 + i * 2);
+                        ctx.stroke();
+                    }
+                    
+                    if (!this.hasUsedFirstCharge) {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
+                }
+                ctx.restore();
+                
+                if (!this.isCharging && this.hasUsedFirstCharge) {
+                    const now = performance.now();
+                    const chargeProgress = Math.min(1, (now - this.lastCharge) / this.chargeCooldown);
+                    if (chargeProgress < 1) {
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * chargeProgress));
+                        ctx.strokeStyle = 'rgba(155, 89, 182, 0.7)';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Health bar for all units
+            const barWidth = this.radius * 2;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth, 4);
+            
+            const healthPercent = this.health / this.maxHealth;
+            let healthColor;
+            if (healthPercent > 0.6) healthColor = '#2ecc71';
+            else if (healthPercent > 0.3) healthColor = '#f39c12';
+            else healthColor = '#e74c3c';
+            
+            ctx.fillStyle = healthColor;
+            ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 8, barWidth * healthPercent, 4);
+            
+            // Reload indicator for musketeer
+            if (this.type === 'musketeer' && !this.isCharging) {
+                const now = performance.now();
+                const reloadProgress = Math.min(1, (now - this.lastShot) / this.attackCooldown);
+                if (reloadProgress < 1) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * reloadProgress));
+                    ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        distanceTo(other) {
+            return Math.hypot(this.x - other.x, this.y - other.y);
+        }
+
+        applySeparation(alliesAndEnemies) {
+            let pushX = 0, pushY = 0;
+            for (let other of alliesAndEnemies) {
+                if (other === this) continue;
+                let dx = this.x - other.x, dy = this.y - other.y;
+                let dist = Math.hypot(dx, dy);
+                let minDist = this.radius + other.radius + 2;
+                if (dist < minDist && dist > 0) {
+                    let force = (minDist - dist) / minDist;
+                    pushX += dx / dist * force * 1.5;
+                    pushY += dy / dist * force * 1.5;
+                }
+            }
+            this.x += pushX; this.y += pushY;
+            this.x = Math.max(mapPadding + this.radius, Math.min(canvas.width - mapPadding - this.radius, this.x));
+            this.y = Math.max(mapPadding + this.radius, Math.min(canvas.height - mapPadding - this.radius, this.y));
+        }
+
+        updateAI(enemies, allies) {
+            if (!gameRunning) return;
+            this.applySeparation([...enemies, ...allies]);
+
+            // CAVALRY AI
+            if (this.type === 'cavalry') {
+                if (enemies.length === 0) return;
+                let closestEnemy = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
+                let distToEnemy = this.distanceTo(closestEnemy);
+                let now = performance.now();
+                const speed = Math.hypot(this.velX, this.velY); this.currentVelocity = speed;
+                const canCharge = (now - this.lastCharge >= this.chargeCooldown) && (distToEnemy >= this.minChargeDistance);
+                
+                if (canCharge && !this.isCharging) {
+                    this.isCharging = true; this.chargeStartTime = now; this.chargeTarget = closestEnemy; this.lastCharge = now;
+                    this.chargeBoost = 1.0;
+                }
+                
+                if (this.isCharging) {
+                    const chargeElapsed = now - this.chargeStartTime;
+                    if (chargeElapsed >= this.chargeDuration || closestEnemy.health <= 0) {
+                        this.isCharging = false; this.chargeBoost = 0; this.chargeTarget = null;
+                        if (!this.hasUsedFirstCharge) this.hasUsedFirstCharge = true;
+                    } else {
+                        const chargeProgress = chargeElapsed / this.chargeDuration;
+                        this.chargeBoost = 1.0 + (chargeProgress * 1.8);
+                        let dx = this.chargeTarget.x - this.x, dy = this.chargeTarget.y - this.y;
+                        let dist = Math.hypot(dx, dy);
+                        if (dist > 0) {
+                            const desiredX = dx / dist; const desiredY = dy / dist;
+                            this.velX = desiredX * this.baseSpeed * this.chargeBoost; this.velY = desiredY * this.baseSpeed * this.chargeBoost;
+                            this.x += this.velX; this.y += this.velY;
+                        }
+                        let touchDistance = this.radius + closestEnemy.radius + 5;
+                        if (distToEnemy <= touchDistance) {
+                            let speedDamageMultiplier = 1.0;
+                            const chargeSpeed = this.currentVelocity * this.chargeBoost;
+                            if (chargeSpeed >= 17 && chargeSpeed <= 18) speedDamageMultiplier = 1.45;
+                            else if (chargeSpeed >= 13 && chargeSpeed <= 16) speedDamageMultiplier = 1.15;
+                            if (now - this.lastAttack >= this.attackCooldown * 0.3) {
+                                const damageMultiplier = getDirectionalDamageMultiplier(this, closestEnemy) * speedDamageMultiplier;
+                                const actualDamage = Math.floor(this.attackPower * damageMultiplier);
+                                const isCritical = damageMultiplier > 1.5 || speedDamageMultiplier > 1.3;
+                                const finalDamage = !this.hasUsedFirstCharge ? Math.floor(actualDamage * 1.5) : actualDamage;
+                                closestEnemy.health -= finalDamage; this.lastAttack = now; this.totalDamageDealt += finalDamage;
+                                if (finalDamage > highestSingleDamage) highestSingleDamage = finalDamage;
+                                damageTexts.push(new DamageText(closestEnemy.x, closestEnemy.y - closestEnemy.radius - 8, finalDamage, false, isCritical || !this.hasUsedFirstCharge));
+                                attackEffects.push(new AttackEffect(closestEnemy.x, closestEnemy.y, this.team, true));
+                                if (!this.hasUsedFirstCharge) this.hasUsedFirstCharge = true;
+                                this.isCharging = false; this.chargeBoost = 0; this.chargeTarget = null;
+                            }
+                        }
+                    }
+                    return;
+                }
+                
+                let dx = closestEnemy.x - this.x, dy = closestEnemy.y - this.y;
+                let dist = Math.hypot(dx, dy);
+                let desiredX = dx / dist, desiredY = dy / dist;
+                let touchDistance = this.radius + closestEnemy.radius + 1;
+                if (dist > touchDistance) {
+                    let speed = this.baseSpeed;
+                    this.velX += (desiredX * speed - this.velX) * this.turnSpeed;
+                    this.velY += (desiredY * speed - this.velY) * this.turnSpeed;
+                    this.x += this.velX; this.y += this.velY;
+                } else { this.velX *= 0.7; this.velY *= 0.7; }
+                if (dist <= touchDistance) {
+                    let now = performance.now();
+                    if (now - this.lastAttack >= this.attackCooldown) {
+                        const damageMultiplier = getDirectionalDamageMultiplier(this, closestEnemy);
+                        const actualDamage = Math.floor(this.attackPower * damageMultiplier);
+                        const isCritical = damageMultiplier > 1.5;
+                        closestEnemy.health -= actualDamage; this.lastAttack = now; this.totalDamageDealt += actualDamage;
+                        if (actualDamage > highestSingleDamage) highestSingleDamage = actualDamage;
+                        damageTexts.push(new DamageText(closestEnemy.x, closestEnemy.y - closestEnemy.radius - 8, actualDamage, false, isCritical));
+                        attackEffects.push(new AttackEffect(closestEnemy.x + (Math.random() - 0.5) * 8, closestEnemy.y + (Math.random() - 0.5) * 8, this.team, isCritical));
+                    }
+                }
+                return;
+            }
+
+            // MUSKETEER AI
+            if (this.type === 'musketeer') {
+                if (enemies.length === 0) return;
+                let closestEnemy = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
+                let distToEnemy = this.distanceTo(closestEnemy);
+                if (distToEnemy < this.bayonetRange) {
+                    this.isCharging = true;
+                    let dx = closestEnemy.x - this.x, dy = closestEnemy.y - this.y;
+                    let dist = Math.hypot(dx, dy);
+                    if (dist > 0) {
+                        const desiredX = dx / dist; const desiredY = dy / dist;
+                        const chargeSpeed = this.maxSpeed * 1.1;
+                        this.velX += (desiredX * chargeSpeed - this.velX) * this.turnSpeed;
+                        this.velY += (desiredY * chargeSpeed - this.velY) * this.turnSpeed;
+                        this.x += this.velX; this.y += this.velY;
+                    }
+                    let touchDistance = this.radius + closestEnemy.radius + 1;
+                    if (distToEnemy <= touchDistance) {
+                        let now = performance.now();
+                        if (now - this.lastAttack >= this.attackCooldown * 0.5) {
+                            const damageMultiplier = getDirectionalDamageMultiplier(this, closestEnemy);
+                            const actualDamage = Math.floor(this.attackPower * 0.7 * damageMultiplier);
+                            const isCritical = damageMultiplier > 1.5;
+                            closestEnemy.health -= actualDamage; this.lastAttack = now; this.totalDamageDealt += actualDamage;
+                            if (actualDamage > highestSingleDamage) highestSingleDamage = actualDamage;
+                            damageTexts.push(new DamageText(closestEnemy.x, closestEnemy.y - closestEnemy.radius - 8, actualDamage, false, isCritical));
+                            attackEffects.push(new AttackEffect(closestEnemy.x + (Math.random() - 0.5) * 8, closestEnemy.y + (Math.random() - 0.5) * 8, this.team, isCritical));
+                        }
+                    }
+                } else {
+                    if (this.isCharging) { this.isCharging = false; this.lastShot = performance.now(); }
+                    this.velX *= 0.9; this.velY *= 0.9;
+                    let dx = closestEnemy.x - this.x, dy = closestEnemy.y - this.y;
+                    this.facingAngle = Math.atan2(dy, dx);
+                    if (distToEnemy <= this.shootingRange) {
+                        let now = performance.now();
+                        if (now - this.lastShot >= this.attackCooldown) {
+                            const miss = Math.random() < this.missChance;
+                            if (!miss) {
+                                const damageMultiplier = getDirectionalDamageMultiplier(this, closestEnemy);
+                                const actualDamage = Math.floor(this.attackPower * damageMultiplier);
+                                const isCritical = damageMultiplier > 1.5;
+                                closestEnemy.health -= actualDamage; this.totalDamageDealt += actualDamage; this.lastShot = now;
+                                if (actualDamage > highestSingleDamage) highestSingleDamage = actualDamage;
+                                damageTexts.push(new DamageText(closestEnemy.x, closestEnemy.y - closestEnemy.radius - 8, actualDamage, false, isCritical));
+                                attackEffects.push(new AttackEffect(closestEnemy.x + (Math.random() - 0.5) * 8, closestEnemy.y + (Math.random() - 0.5) * 8, this.team, isCritical));
+                            } else { damageTexts.push(new DamageText(closestEnemy.x, closestEnemy.y - closestEnemy.radius - 8, 0, false, false, true)); }
+                            musketEffects.push(new MusketEffect(this.x, this.y, closestEnemy.x, closestEnemy.y, !miss));
+                            this.lastShot = now;
+                        }
+                    } else {
+                        if (distToEnemy > 0) {
+                            const desiredX = dx / distToEnemy; const desiredY = dy / distToEnemy;
+                            this.velX += (desiredX * this.maxSpeed * 0.7 - this.velX) * this.turnSpeed;
+                            this.velY += (desiredY * this.maxSpeed * 0.7 - this.velY) * this.turnSpeed;
+                            this.x += this.velX; this.y += this.velY;
+                        }
+                    }
+                }
+                return;
+            }
+
+            // HEALER AI
+            if (this.type === 'healer') {
+                let healingCandidates = [];
+                
+                for (let ally of allies) {
+                    if (ally === this || ally.health <= 0) continue;
+                    
+                    let priority = 0;
+                    const healthPercent = ally.health / ally.maxHealth;
+                    
+                    priority += (1 - healthPercent) * 100;
+                    
+                    if (ally.type !== 'healer') {
+                        priority += 50;
+                        
+                        if (ally.type === 'tank') priority += 30;
+                        if (ally.type === 'cavalry') priority += 20;
+                        
+                        const closeEnemies = enemies.filter(e => this.distanceTo(e) < 100);
+                        if (closeEnemies.length > 0) {
+                            priority += 40;
+                        }
+                    } else {
+                        priority -= 80;
+                    }
+                    
+                    const distance = this.distanceTo(ally);
+                    priority -= distance * 0.5;
+                    
+                    if (healthPercent < 0.9) {
+                        healingCandidates.push({
+                            ally: ally,
+                            priority: priority,
+                            healthPercent: healthPercent,
+                            distance: distance
+                        });
+                    }
+                }
+                
+                healingCandidates.sort((a, b) => b.priority - a.priority);
+                
+                if (healingCandidates.length > 0) {
+                    let target = healingCandidates[0].ally;
+                    let distToTarget = this.distanceTo(target);
+                    
+                    if (distToTarget > this.healRange + 5) {
+                        let dx = target.x - this.x, dy = target.y - this.y;
+                        let dist = Math.hypot(dx, dy);
+                        if (dist > 0) {
+                            const desiredX = dx / dist; const desiredY = dy / dist;
+                            const moveSpeed = Math.min(this.maxSpeed, distToTarget - this.healRange) * 0.7;
+                            this.velX += (desiredX * moveSpeed - this.velX) * this.turnSpeed;
+                            this.velY += (desiredY * moveSpeed - this.velY) * this.turnSpeed;
+                            this.x += this.velX; this.y += this.velY;
+                        }
+                    } else {
+                        this.velX *= 0.8; this.velY *= 0.8;
+                        let now = performance.now();
+                        if (now - this.lastHeal >= this.healCooldown) {
+                            const healAmount = Math.min(this.healPower, target.maxHealth - target.health);
+                            if (healAmount > 0) {
+                                target.health += healAmount; this.lastHeal = now;
+                                const healEffect = new HealingEffect(this.x, this.y, target.x, target.y, healAmount);
+                                healEffect.healingUnitId = target.id; healingEffects.push(healEffect);
+                                damageTexts.push(new DamageText(target.x, target.y - target.radius - 10, healAmount, true));
+                            }
+                        }
+                    }
+                } else {
+                    if (allies.length > 1) {
+                        let combatAllies = allies.filter(a => a !== this && a.type !== 'healer');
+                        if (combatAllies.length > 0) {
+                            let avgX = 0, avgY = 0;
+                            combatAllies.forEach(ally => { avgX += ally.x; avgY += ally.y; });
+                            avgX /= combatAllies.length; avgY /= combatAllies.length;
+                            
+                            let dx = avgX - this.x, dy = avgY - this.y;
+                            let dist = Math.hypot(dx, dy);
+                            if (dist > this.healRange * 0.7) {
+                                const desiredX = dx / dist; const desiredY = dy / dist;
+                                this.velX += (desiredX * this.maxSpeed * 0.4 - this.velX) * this.turnSpeed;
+                                this.velY += (desiredY * this.maxSpeed * 0.4 - this.velY) * this.turnSpeed;
+                            }
+                            this.x += this.velX; this.y += this.velY;
+                        }
+                    }
+                }
+                return;
+            }
+
+            // DEFAULT COMBAT AI for soldiers and tanks
+            if (enemies.length === 0) return;
+            let target = enemies.reduce((a, b) => this.distanceTo(a) < this.distanceTo(b) ? a : b);
+            let dx = target.x - this.x, dy = target.y - this.y;
+            let dist = Math.hypot(dx, dy);
+            let desiredX = dx / dist, desiredY = dy / dist;
+            let touchDistance = this.radius + target.radius + 1;
+            
+            if (dist > touchDistance) {
+                let speed = this.maxSpeed;
+                this.velX += (desiredX * speed - this.velX) * this.turnSpeed;
+                this.velY += (desiredY * speed - this.velY) * this.turnSpeed;
+                this.x += this.velX; this.y += this.velY;
+            } else { this.velX *= 0.7; this.velY *= 0.7; }
+
+            if (dist <= touchDistance) {
+                let now = performance.now();
+                if (now - this.lastAttack >= this.attackCooldown) {
+                    const damageMultiplier = getDirectionalDamageMultiplier(this, target);
+                    const actualDamage = Math.floor(this.attackPower * damageMultiplier);
+                    const isCritical = damageMultiplier > 1.5;
+                    target.health -= actualDamage; this.lastAttack = now; this.totalDamageDealt += actualDamage;
+                    if (actualDamage > highestSingleDamage) highestSingleDamage = actualDamage;
+                    damageTexts.push(new DamageText(target.x, target.y - target.radius - 8, actualDamage, false, isCritical));
+                    attackEffects.push(new AttackEffect(target.x + (Math.random() - 0.5) * 8, target.y + (Math.random() - 0.5) * 8, this.team, isCritical));
+                }
+            }
+        }
+    }
+
     function saveOriginalPlacements() {
         originalCircles = circles.map(circle => ({
             x: circle.x, y: circle.y, team: circle.team, type: circle.type,
@@ -317,27 +901,13 @@ function initGame() {
     function restoreOriginalPlacements() {
         circles = []; attackEffects = []; musketEffects = []; healingEffects = []; damageTexts = [];
         originalCircles.forEach(original => {
-            let circle;
-            if (original.type === 'soldier') {
-                circle = new Soldier(original.x, original.y, original.team, canvas, baseUnitSize);
-            } else if (original.type === 'tank') {
-                circle = new Tank(original.x, original.y, original.team, canvas, baseUnitSize);
-            } else if (original.type === 'healer') {
-                circle = new Healer(original.x, original.y, original.team, canvas, baseUnitSize);
-            } else if (original.type === 'musketeer') {
-                circle = new Musketeer(original.x, original.y, original.team, canvas, baseUnitSize, MUSKET_RANGE, BAYONET_RANGE);
-            } else if (original.type === 'cavalry') {
-                circle = new Cavalry(original.x, original.y, original.team, canvas, baseUnitSize);
+            const circle = new Circle(original.x, original.y, original.team, original.type);
+            circle.health = original.maxHealth; circle.maxHealth = original.maxHealth;
+            if (original.type === 'cavalry' && original.hasUsedFirstCharge === false) {
+                circle.hasUsedFirstCharge = false;
+                circle.lastCharge = performance.now() - circle.chargeCooldown - 10000;
             }
-            if (circle) {
-                circle.health = original.maxHealth;
-                circle.maxHealth = original.maxHealth;
-                if (original.type === 'cavalry' && original.hasUsedFirstCharge === false) {
-                    circle.hasUsedFirstCharge = false;
-                    circle.lastCharge = performance.now() - circle.chargeCooldown - 10000;
-                }
-                circles.push(circle);
-            }
+            circles.push(circle);
         });
         gameRunning = false; showGhost = true; battleStartTime = 0; battleDuration = 0;
         totalKills = 0; highestSingleDamage = 0; playAgainHeaderBtn.style.display = 'none';
@@ -374,36 +944,15 @@ function initGame() {
 
     function handleCanvasClick(x, y) {
         if (gameRunning) return;
-        const radius = baseUnitSize * (Math.min(canvas.width, canvas.height) / 800);
+        const radius = baseUnitSize * UNIT_SETTINGS[placingMode].radius * (Math.min(canvas.width, canvas.height) / 800);
         const withinBounds = x > mapPadding + radius && x < canvas.width - mapPadding - radius && y > mapPadding + radius && y < canvas.height - mapPadding - radius;
         if (!withinBounds) { showNotification('Cannot place outside battlefield', 'warning'); return; }
 
         if (placingMode === "soldier" || placingMode === "tank" || placingMode === "healer" || placingMode === "musketeer" || placingMode === "cavalry") {
-            let type = placingMode; 
-            let team = x < canvas.width/2 ? 'red' : 'blue';
+            let type = placingMode; let team = x < canvas.width/2 ? 'red' : 'blue';
             let blocked = circles.some(c => Math.hypot(c.x - x, c.y - y) < (c.radius + radius) * 0.8);
-            
-            if (!blocked) {
-                let newUnit;
-                if (type === "soldier") {
-                    newUnit = new Soldier(x, y, team, canvas, baseUnitSize);
-                } else if (type === "tank") {
-                    newUnit = new Tank(x, y, team, canvas, baseUnitSize);
-                } else if (type === "healer") {
-                    newUnit = new Healer(x, y, team, canvas, baseUnitSize);
-                } else if (type === "musketeer") {
-                    newUnit = new Musketeer(x, y, team, canvas, baseUnitSize, MUSKET_RANGE, BAYONET_RANGE);
-                } else if (type === "cavalry") {
-                    newUnit = new Cavalry(x, y, team, canvas, baseUnitSize);
-                }
-                
-                if (newUnit) {
-                    circles.push(newUnit);
-                    showNotification(`${type} placed`, 'info');
-                }
-            } else {
-                showNotification('Space occupied', 'warning');
-            }
+            if (!blocked) { circles.push(new Circle(x, y, team, type)); showNotification(`${type} placed`, 'info'); }
+            else showNotification('Space occupied', 'warning');
         } else if (placingMode === "delete") {
             const beforeCount = circles.length;
             circles = circles.filter(c => Math.hypot(c.x - x, c.y - y) > c.radius);
@@ -476,39 +1025,27 @@ function initGame() {
             circles = []; 
             const padding = mapPadding + 30;
             
-            // Red Team - Balanced composition
-            for (let i = 0; i < 4; i++) {
-                circles.push(new Soldier(
-                    padding + Math.random() * (canvas.width/2 - padding*2), 
-                    padding + Math.random() * (canvas.height - padding*2), 
-                    'red', canvas, baseUnitSize
-                ));
-            }
-            circles.push(new Tank(padding + 40, canvas.height/2 - 60, 'red', canvas, baseUnitSize));
-            circles.push(new Tank(padding + 80, canvas.height/2 + 60, 'red', canvas, baseUnitSize));
-            circles.push(new Healer(padding + 60, canvas.height/3, 'red', canvas, baseUnitSize));
-            circles.push(new Healer(padding + 100, canvas.height*2/3, 'red', canvas, baseUnitSize));
-            circles.push(new Musketeer(padding + 120, canvas.height/4, 'red', canvas, baseUnitSize, MUSKET_RANGE, BAYONET_RANGE));
-            circles.push(new Musketeer(padding + 140, canvas.height*3/4, 'red', canvas, baseUnitSize, MUSKET_RANGE, BAYONET_RANGE));
-            circles.push(new Cavalry(padding + 160, canvas.height/5, 'red', canvas, baseUnitSize));
-            circles.push(new Cavalry(padding + 180, canvas.height*4/5, 'red', canvas, baseUnitSize));
+            // Red Team
+            for (let i = 0; i < 4; i++) circles.push(new Circle(padding + Math.random() * (canvas.width/2 - padding*2), padding + Math.random() * (canvas.height - padding*2), 'red', 'soldier'));
+            circles.push(new Circle(padding + 40, canvas.height/2 - 60, 'red', 'tank'));
+            circles.push(new Circle(padding + 80, canvas.height/2 + 60, 'red', 'tank'));
+            circles.push(new Circle(padding + 60, canvas.height/3, 'red', 'healer'));
+            circles.push(new Circle(padding + 100, canvas.height*2/3, 'red', 'healer'));
+            circles.push(new Circle(padding + 120, canvas.height/4, 'red', 'musketeer'));
+            circles.push(new Circle(padding + 140, canvas.height*3/4, 'red', 'musketeer'));
+            circles.push(new Circle(padding + 160, canvas.height/5, 'red', 'cavalry'));
+            circles.push(new Circle(padding + 180, canvas.height*4/5, 'red', 'cavalry'));
             
-            // Blue Team - Balanced composition
-            for (let i = 0; i < 4; i++) {
-                circles.push(new Soldier(
-                    canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*2), 
-                    padding + Math.random() * (canvas.height - padding*2), 
-                    'blue', canvas, baseUnitSize
-                ));
-            }
-            circles.push(new Tank(canvas.width - padding - 40, canvas.height/2 - 60, 'blue', canvas, baseUnitSize));
-            circles.push(new Tank(canvas.width - padding - 80, canvas.height/2 + 60, 'blue', canvas, baseUnitSize));
-            circles.push(new Healer(canvas.width - padding - 60, canvas.height/3, 'blue', canvas, baseUnitSize));
-            circles.push(new Healer(canvas.width - padding - 100, canvas.height*2/3, 'blue', canvas, baseUnitSize));
-            circles.push(new Musketeer(canvas.width - padding - 120, canvas.height/4, 'blue', canvas, baseUnitSize, MUSKET_RANGE, BAYONET_RANGE));
-            circles.push(new Musketeer(canvas.width - padding - 140, canvas.height*3/4, 'blue', canvas, baseUnitSize, MUSKET_RANGE, BAYONET_RANGE));
-            circles.push(new Cavalry(canvas.width - padding - 160, canvas.height/5, 'blue', canvas, baseUnitSize));
-            circles.push(new Cavalry(canvas.width - padding - 180, canvas.height*4/5, 'blue', canvas, baseUnitSize));
+            // Blue Team
+            for (let i = 0; i < 4; i++) circles.push(new Circle(canvas.width/2 + padding + Math.random() * (canvas.width/2 - padding*2), padding + Math.random() * (canvas.height - padding*2), 'blue', 'soldier'));
+            circles.push(new Circle(canvas.width - padding - 40, canvas.height/2 - 60, 'blue', 'tank'));
+            circles.push(new Circle(canvas.width - padding - 80, canvas.height/2 + 60, 'blue', 'tank'));
+            circles.push(new Circle(canvas.width - padding - 60, canvas.height/3, 'blue', 'healer'));
+            circles.push(new Circle(canvas.width - padding - 100, canvas.height*2/3, 'blue', 'healer'));
+            circles.push(new Circle(canvas.width - padding - 120, canvas.height/4, 'blue', 'musketeer'));
+            circles.push(new Circle(canvas.width - padding - 140, canvas.height*3/4, 'blue', 'musketeer'));
+            circles.push(new Circle(canvas.width - padding - 160, canvas.height/5, 'blue', 'cavalry'));
+            circles.push(new Circle(canvas.width - padding - 180, canvas.height*4/5, 'blue', 'cavalry'));
             
             showNotification('Auto-placed armies', 'info');
         };
@@ -534,48 +1071,8 @@ function initGame() {
         for (let c of circles) {
             let allies = circles.filter(x => x.team === c.team && x.health > 0);
             let enemies = circles.filter(x => x.team !== c.team && x.health > 0);
-            
-            // Apply separation (collision avoidance)
-            c.applySeparation([...enemies, ...allies], mapPadding, canvas);
-            
-            // Update AI based on unit type
-            if (c.type === 'healer') {
-                c.updateAI(enemies, allies, gameRunning, healingEffects, damageTexts);
-            } else if (c.type === 'musketeer') {
-                c.updateAI(enemies, allies, gameRunning, getDirectionalDamageMultiplier, attackEffects, damageTexts, musketEffects, {value: highestSingleDamage});
-            } else if (c.type === 'cavalry') {
-                c.updateAI(enemies, allies, gameRunning, getDirectionalDamageMultiplier, attackEffects, damageTexts, {value: highestSingleDamage});
-            } else {
-                // Soldier and Tank use default combat AI
-                if (enemies.length === 0) continue;
-                let target = enemies.reduce((a, b) => c.distanceTo(a) < c.distanceTo(b) ? a : b);
-                let dx = target.x - c.x, dy = target.y - c.y;
-                let dist = Math.hypot(dx, dy);
-                let desiredX = dx / dist, desiredY = dy / dist;
-                let touchDistance = c.radius + target.radius + 1;
-                
-                if (dist > touchDistance) {
-                    let speed = c.maxSpeed;
-                    c.velX += (desiredX * speed - c.velX) * c.turnSpeed;
-                    c.velY += (desiredY * speed - c.velY) * c.turnSpeed;
-                    c.x += c.velX; c.y += c.velY;
-                } else { c.velX *= 0.7; c.velY *= 0.7; }
-
-                if (dist <= touchDistance && c.type !== 'healer') {
-                    let now = performance.now();
-                    if (now - c.lastAttack >= c.attackCooldown) {
-                        const damageMultiplier = getDirectionalDamageMultiplier(c, target);
-                        const actualDamage = Math.floor(c.attackPower * damageMultiplier);
-                        const isCritical = damageMultiplier > 1.5;
-                        target.health -= actualDamage; c.lastAttack = now; c.totalDamageDealt += actualDamage;
-                        if (actualDamage > highestSingleDamage) highestSingleDamage = actualDamage;
-                        damageTexts.push(new DamageText(target.x, target.y - target.radius - 8, actualDamage, false, isCritical));
-                        attackEffects.push(new AttackEffect(target.x + (Math.random() - 0.5) * 8, target.y + (Math.random() - 0.5) * 8, c.team, isCritical));
-                    }
-                }
-            }
-            
-            c.draw(ctx);
+            for (let i = 0; i < gameSpeed; i++) c.updateAI(enemies, allies);
+            c.draw();
             if (c.health <= 0 && c.lastHealth > 0) totalKills++;
             c.lastHealth = c.health;
         }
