@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neon Battle Simulator - Complete Edition</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4542780004398954"
-        crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="header">
@@ -39,27 +35,227 @@
 
     <div class="main-container">
         <div class="sidebar">
-            <div class="sidebar-section">
-                <h3 class="stats-title">Battle Statistics</h3>
-                <div class="stat-row">
-                    <span>🔴 Red:</span>
-                    <span class="red-stat" id="redCount">0</span>
+            <!-- Sidebar Tabs -->
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" data-tab="battle-stats">📊 Stats</button>
+                <button class="sidebar-tab" data-tab="how-to-play">❓ How to Play</button>
+                <button class="sidebar-tab" data-tab="unit-info">📋 Unit Info</button>
+            </div>
+            
+            <!-- Battle Statistics Tab (Default) -->
+            <div class="sidebar-content active" data-tab="battle-stats">
+                <div class="sidebar-section">
+                    <h3 class="stats-title">Battle Statistics</h3>
+                    <div class="stat-row">
+                        <span>🔴 Red:</span>
+                        <span class="red-stat" id="redCount">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>🔵 Blue:</span>
+                        <span class="blue-stat" id="blueCount">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Total:</span>
+                        <span id="totalCount">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>⏱️ Time:</span>
+                        <span class="green-stat" id="battleTime">0s</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Status:</span>
+                        <span id="gameStatus">Paused</span>
+                    </div>
                 </div>
-                <div class="stat-row">
-                    <span>🔵 Blue:</span>
-                    <span class="blue-stat" id="blueCount">0</span>
+            </div>
+            
+            <!-- How to Play Tab -->
+            <div class="sidebar-content" data-tab="how-to-play">
+                <div class="sidebar-section">
+                    <h3 class="how-to-title">❓ How to Play</h3>
+                    <div class="how-to-content">
+                        <div class="instruction">
+                            <div class="instruction-icon">🎮</div>
+                            <div class="instruction-text">
+                                <strong>1. Place Units</strong>
+                                <p>Click on unit buttons, then click on the battlefield to place them. Red side = left, Blue side = right.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="instruction">
+                            <div class="instruction-icon">⚔️</div>
+                            <div class="instruction-text">
+                                <strong>2. Unit Types</strong>
+                                <p>• 👤 Soldier - Balanced infantry<br>
+                                   • 🛡️ Tank - High health, slow<br>
+                                   • ❤️ Healer - Heals allies<br>
+                                   • 🎯 Musketeer - Ranged attacker<br>
+                                   • 🐎 Cavalry - Fast with charge ability</p>
+                            </div>
+                        </div>
+                        
+                        <div class="instruction">
+                            <div class="instruction-icon">🚀</div>
+                            <div class="instruction-text">
+                                <strong>3. Start Battle</strong>
+                                <p>Click "Start" to begin the simulation. Units will automatically fight.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="instruction">
+                            <div class="instruction-icon">🛠️</div>
+                            <div class="instruction-text">
+                                <strong>4. Controls</strong>
+                                <p>• 🗑️ Delete - Remove units<br>
+                                   • 🔥 Delete All - Clear battlefield<br>
+                                   • 🤖 Auto Place - Pre-made armies<br>
+                                   • ⏸️/▶️ - Pause/Resume battle</p>
+                            </div>
+                        </div>
+                        
+                        <div class="instruction">
+                            <div class="instruction-icon">🎯</div>
+                            <div class="instruction-text">
+                                <strong>5. Strategy Tips</strong>
+                                <p>• Mix unit types for balanced army<br>
+                                   • Healers behind front lines<br>
+                                   • Use cavalry for flanking attacks<br>
+                                   • Tanks as damage absorbers</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-row">
-                    <span>Total:</span>
-                    <span id="totalCount">0</span>
-                </div>
-                <div class="stat-row">
-                    <span>⏱️ Time:</span>
-                    <span class="green-stat" id="battleTime">0s</span>
-                </div>
-                <div class="stat-row">
-                    <span>Status:</span>
-                    <span id="gameStatus">Paused</span>
+            </div>
+            
+            <!-- Unit Information Tab -->
+            <div class="sidebar-content" data-tab="unit-info">
+                <div class="sidebar-section">
+                    <h3 class="unit-info-title">📋 Unit Information</h3>
+                    
+                    <div class="unit-tabs">
+                        <button class="unit-tab active" data-unit="soldier">👤 Soldier</button>
+                        <button class="unit-tab" data-unit="tank">🛡️ Tank</button>
+                        <button class="unit-tab" data-unit="healer">❤️ Healer</button>
+                        <button class="unit-tab" data-unit="musketeer">🎯 Musketeer</button>
+                        <button class="unit-tab" data-unit="cavalry">🐎 Cavalry</button>
+                    </div>
+                    
+                    <div class="unit-details">
+                        <!-- Soldier Info (Default) -->
+                        <div class="unit-detail active" data-unit="soldier">
+                            <div class="unit-stat">
+                                <span>Health:</span>
+                                <span class="stat-value">100</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Damage:</span>
+                                <span class="stat-value">11</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Speed:</span>
+                                <span class="stat-value">High</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Attack Speed:</span>
+                                <span class="stat-value">Fast</span>
+                            </div>
+                            <div class="unit-desc">
+                                Balanced infantry unit. Good all-around combatant.
+                            </div>
+                        </div>
+                        
+                        <!-- Tank Info -->
+                        <div class="unit-detail" data-unit="tank">
+                            <div class="unit-stat">
+                                <span>Health:</span>
+                                <span class="stat-value">200</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Damage:</span>
+                                <span class="stat-value">19</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Speed:</span>
+                                <span class="stat-value">Slow</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Attack Speed:</span>
+                                <span class="stat-value">Slow</span>
+                            </div>
+                            <div class="unit-desc">
+                                Heavy armored unit. High health and damage but slow.
+                            </div>
+                        </div>
+                        
+                        <!-- Healer Info -->
+                        <div class="unit-detail" data-unit="healer">
+                            <div class="unit-stat">
+                                <span>Health:</span>
+                                <span class="stat-value">80</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Heal Power:</span>
+                                <span class="stat-value">6</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Speed:</span>
+                                <span class="stat-value">Medium</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Heal Range:</span>
+                                <span class="stat-value">60</span>
+                            </div>
+                            <div class="unit-desc">
+                                Support unit. Heals allies automatically.
+                            </div>
+                        </div>
+                        
+                        <!-- Musketeer Info -->
+                        <div class="unit-detail" data-unit="musketeer">
+                            <div class="unit-stat">
+                                <span>Health:</span>
+                                <span class="stat-value">60</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Damage:</span>
+                                <span class="stat-value">25</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Range:</span>
+                                <span class="stat-value">150</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Miss Chance:</span>
+                                <span class="stat-value">35%</span>
+                            </div>
+                            <div class="unit-desc">
+                                Ranged attacker. High damage but can miss.
+                            </div>
+                        </div>
+                        
+                        <!-- Cavalry Info -->
+                        <div class="unit-detail" data-unit="cavalry">
+                            <div class="unit-stat">
+                                <span>Health:</span>
+                                <span class="stat-value">120</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Damage:</span>
+                                <span class="stat-value">16</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Speed:</span>
+                                <span class="stat-value">Very High</span>
+                            </div>
+                            <div class="unit-stat">
+                                <span>Charge Cooldown:</span>
+                                <span class="stat-value">25s</span>
+                            </div>
+                            <div class="unit-desc">
+                                Fast cavalry with charge ability. Great for flanking.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
