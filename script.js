@@ -1,3 +1,4 @@
+script.js
 // ============================================
 // UNIT SETTINGS - EASY TO EDIT!
 // ============================================
@@ -64,7 +65,7 @@ const UNIT_SETTINGS = {
 };
 
 // ============================================
-// MAIN GAME CODE
+// MAIN GAME CODE (DON'T EDIT BELOW UNLESS YOU KNOW WHAT YOU'RE DOING)
 // ============================================
 
 // Wait for DOM to be fully loaded
@@ -131,49 +132,6 @@ function initGame() {
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-
-    // ===== UNIT INFO TAB FUNCTIONALITY =====
-    function initUnitInfoTab() {
-        const unitTabs = document.querySelectorAll('.unit-tab');
-        const unitDetails = document.querySelectorAll('.unit-detail');
-        
-        // Function to switch unit info
-        function switchUnitInfo(unitType) {
-            // Update active tab
-            unitTabs.forEach(tab => {
-                tab.classList.remove('active');
-                if (tab.dataset.unit === unitType) {
-                    tab.classList.add('active');
-                }
-            });
-            
-            // Update active detail
-            unitDetails.forEach(detail => {
-                detail.classList.remove('active');
-                if (detail.dataset.unit === unitType) {
-                    detail.classList.add('active');
-                }
-            });
-        }
-        
-        // Add click events to tabs
-        unitTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                switchUnitInfo(tab.dataset.unit);
-            });
-        });
-        
-        // Sync with placement buttons
-        document.querySelectorAll('.unit-controls button[data-type]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const unitType = btn.dataset.type;
-                switchUnitInfo(unitType);
-            });
-        });
-        
-        // Initialize with soldier
-        switchUnitInfo('soldier');
-    }
 
     // Update active button styling
     function updateActiveButton() {
@@ -1113,7 +1071,6 @@ function initGame() {
         setupEventListeners();
         updateActiveButton();
         updateStartPauseButton();
-        initUnitInfoTab();  // Initialize the Unit Info Tab
         gameLoop();
     }
 
