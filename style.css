@@ -10,8 +10,83 @@ body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     background: #0f0f0f;
     color: #ffffff;
-    height: 100vh;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== AD SENSE STYLING ===== */
+
+/* Ad containers */
+.header-ad-container,
+.footer-ad-container,
+.left-ad-container,
+.right-ad-container,
+.sidebar-ad {
+    background: transparent;
+    margin: 0 auto;
+    text-align: center;
     overflow: hidden;
+}
+
+/* Header ad (top) */
+.header-ad-container {
+    width: 100%;
+    max-width: 970px;
+    height: 90px;
+    margin: 0 auto;
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid #333;
+}
+
+/* Footer ad (bottom) */
+.footer-ad-container {
+    width: 100%;
+    max-width: 970px;
+    height: 90px;
+    margin: 10px auto 0;
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid #333;
+}
+
+/* Side ads (desktop only) */
+.left-ad-container,
+.right-ad-container {
+    width: 160px;
+    display: none;
+    padding: 20px 10px;
+}
+
+/* Main content wrapper */
+.content-wrapper {
+    display: flex;
+    flex: 1;
+    min-height: calc(100vh - 200px);
+    background: #1a1a1a;
+}
+
+/* Sidebar ad */
+.sidebar-ad {
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+/* Ensure ads don't interfere with game */
+ins.adsbygoogle {
+    display: block !important;
+    z-index: 100;
+    position: relative;
+}
+
+/* Make sure game canvas is above ads but not blocking them */
+#gameCanvas {
+    z-index: 1;
+    position: relative;
 }
 
 /* HEADER - ORIGINAL */
@@ -126,7 +201,8 @@ body {
 /* MAIN CONTAINER */
 .main-container {
     display: flex;
-    height: calc(100vh - 60px);
+    flex: 1;
+    height: 100%;
     background: #1a1a1a;
 }
 
@@ -725,7 +801,7 @@ body {
 
 .play-again-btn:active { transform: translateY(-1px) scale(1.02); }
 
-/* ===== MOBILE RESPONSIVE - ADDED ===== */
+/* ===== MOBILE RESPONSIVE ===== */
 
 /* Mobile Loading Screen */
 .mobile-loading {
@@ -772,8 +848,31 @@ body {
     box-shadow: 0 6px 20px rgba(52, 152, 219, 0.6);
 }
 
-/* Tablet & Mobile */
+/* Mobile ads */
 @media (max-width: 768px) {
+    .header-ad-container,
+    .footer-ad-container {
+        height: 100px;
+        max-width: 100%;
+        padding: 5px;
+    }
+    
+    .header-ad-container ins,
+    .footer-ad-container ins {
+        width: 320px;
+        height: 100px;
+        margin: 0 auto;
+    }
+    
+    /* Hide sidebar ads on mobile */
+    .sidebar-ad {
+        display: none;
+    }
+    
+    .content-wrapper {
+        flex-direction: column;
+    }
+    
     .mobile-help-btn {
         display: block;
     }
@@ -814,7 +913,7 @@ body {
     .main-container {
         flex-direction: column;
         height: auto;
-        min-height: calc(100vh - 140px);
+        min-height: calc(100vh - 200px);
     }
     
     .sidebar {
@@ -887,6 +986,35 @@ body {
     }
 }
 
+/* Desktop ads */
+@media (min-width: 1024px) {
+    .left-ad-container,
+    .right-ad-container {
+        display: block;
+    }
+    
+    .header-ad-container ins,
+    .footer-ad-container ins {
+        width: 970px;
+        height: 90px;
+    }
+}
+
+/* Tablet ads */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .header-ad-container,
+    .footer-ad-container {
+        max-width: 728px;
+        height: 90px;
+    }
+    
+    .header-ad-container ins,
+    .footer-ad-container ins {
+        width: 728px;
+        height: 90px;
+    }
+}
+
 /* Small phones */
 @media (max-width: 480px) {
     .header h1 {
@@ -922,6 +1050,17 @@ body {
         padding: 10px 0;
         font-size: 0.85rem;
     }
+    
+    .header-ad-container,
+    .footer-ad-container {
+        height: 50px;
+    }
+    
+    .header-ad-container ins,
+    .footer-ad-container ins {
+        width: 300px;
+        height: 50px;
+    }
 }
 
 /* Landscape mode for mobile */
@@ -945,7 +1084,7 @@ body {
     
     .main-container {
         flex-direction: row;
-        height: calc(100vh - 66px);
+        height: calc(100vh - 150px);
     }
     
     .sidebar {
