@@ -1,9 +1,13 @@
-/* ===== COMPLETE CSS - FINAL VERSION ===== */
+/* ===== COMPLETE CSS - MOBILE FIXED VERSION ===== */
 
 * { 
     margin: 0; 
     padding: 0; 
     box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 body { 
@@ -12,9 +16,10 @@ body {
     color: #ffffff;
     height: 100vh;
     overflow: hidden;
+    touch-action: manipulation;
 }
 
-/* HEADER - ORIGINAL */
+/* HEADER - IMPROVED FOR MOBILE */
 .header { 
     background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
     border-bottom: 1px solid #333;
@@ -25,6 +30,8 @@ body {
     flex-wrap: wrap;
     gap: 12px;
     min-height: 60px;
+    position: relative;
+    z-index: 100;
 }
 
 .header h1 { 
@@ -35,6 +42,7 @@ body {
     align-items: center;
     gap: 8px;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .header h1::before { content: "⚔️"; font-size: 1.4rem; }
@@ -45,6 +53,7 @@ body {
     gap: 12px;
     justify-content: flex-end;
     flex: 1;
+    min-width: 0;
 }
 
 .unit-controls, .game-controls {
@@ -54,6 +63,7 @@ body {
     padding: 4px;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
+    min-width: 0;
 }
 
 .unit-controls {
@@ -77,6 +87,7 @@ body {
     font-size: 0.85rem;
     color: #fff;
     min-width: 70px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -84,6 +95,9 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     touch-action: manipulation;
     white-space: nowrap;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
 }
 
 .header button:hover { 
@@ -93,19 +107,56 @@ body {
 }
 .header button:active { transform: translateY(0); }
 
+/* RED ACTIVE STATE FOR ALL BUTTONS WHEN SELECTED */
+.header button.active-red {
+    background: #c0392b !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(231, 76, 60, 0.5) !important;
+    transform: translateY(0) !important;
+    color: white !important;
+    font-weight: 700 !important;
+}
+
+.header button.active-red::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    height: 2px;
+    background: #ff6b6b;
+    border-radius: 1px;
+    animation: pulseRed 1.5s infinite;
+}
+
+@keyframes pulseRed {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+/* Unit button base colors */
 .unit-btn { background: #e74c3c; }
 .unit-btn:hover { background: #ec7063; }
 .unit-btn.active { 
     background: #c0392b; 
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(231, 76, 60, 0.5);
     transform: translateY(0);
 }
 
 .special-btn { background: #3498db; }
 .special-btn:hover { background: #5dade2; }
+.special-btn.active-red {
+    background: #c0392b !important;
+    color: white !important;
+}
+
 .cavalry-btn { background: #8e44ad; }
 .cavalry-btn:hover { background: #9b59b6; }
+.cavalry-btn.active-red {
+    background: #c0392b !important;
+    color: white !important;
+}
 
+/* Control buttons - ALSO GET RED WHEN ACTIVE */
 .control-btn { background: #27ae60; }
 .control-btn:hover { background: #2ecc71; }
 .control-btn.pause { 
@@ -113,21 +164,62 @@ body {
     color: white;
 }
 .control-btn.pause:hover { background: #f4d03f; }
+.control-btn.active-red,
+.control-btn.pause.active-red {
+    background: #c0392b !important;
+    color: white !important;
+}
 
 .danger-btn { background: #e67e22; }
 .danger-btn:hover { background: #eb984e; }
+.danger-btn.active-red {
+    background: #c0392b !important;
+    color: white !important;
+}
+
 .delete-all-btn { background: #c0392b; }
 .delete-all-btn:hover { background: #e74c3c; }
+.delete-all-btn.active-red {
+    background: #c0392b !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(231, 76, 60, 0.7) !important;
+    color: white !important;
+}
+
 .auto-btn { background: #9b59b6; }
 .auto-btn:hover { background: #af7ac5; }
+.auto-btn.active-red {
+    background: #c0392b !important;
+    color: white !important;
+}
+
 .play-again-header-btn { background: #1abc9c; }
 .play-again-header-btn:hover { background: #48c9b0; }
+.play-again-header-btn.active-red {
+    background: #c0392b !important;
+    color: white !important;
+}
+
+/* Delete button special styling when active */
+#deleteTool.active-red {
+    background: #c0392b !important;
+    animation: deletePulse 1s infinite;
+}
+
+@keyframes deletePulse {
+    0%, 100% { 
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(231, 76, 60, 0.5);
+    }
+    50% { 
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(231, 76, 60, 0.7);
+    }
+}
 
 /* MAIN CONTAINER */
 .main-container {
     display: flex;
     height: calc(100vh - 60px);
     background: #1a1a1a;
+    touch-action: none;
 }
 
 /* ===== SIDEBAR ===== */
@@ -141,6 +233,7 @@ body {
     overflow: hidden;
     box-shadow: inset -5px 0 15px rgba(0, 0, 0, 0.3);
     position: relative;
+    -webkit-overflow-scrolling: touch;
 }
 
 .sidebar::after {
@@ -180,6 +273,10 @@ body {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .sidebar-tab:hover {
@@ -462,6 +559,7 @@ body {
     gap: 6px;
     position: relative;
     overflow: hidden;
+    min-height: 60px;
 }
 
 .unit-tab:hover {
@@ -575,6 +673,7 @@ body {
     padding: 12px;
     background: #1a1a1a;
     display: flex;
+    touch-action: none;
 }
 
 #gameCanvas { 
@@ -584,6 +683,7 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     border: 1px solid #333;
+    touch-action: none;
 }
 
 /* NOTIFICATION */
@@ -603,6 +703,7 @@ body {
     font-weight: 600;
     font-size: 0.85rem;
     border-left: 4px solid rgba(255, 255, 255, 0.3);
+    word-break: break-word;
 }
 
 .notification.show { transform: translateX(0); }
@@ -715,6 +816,7 @@ body {
     justify-content: center;
     gap: 12px;
     margin: 0 auto;
+    min-height: 60px;
 }
 
 .play-again-btn:hover {
@@ -725,7 +827,7 @@ body {
 
 .play-again-btn:active { transform: translateY(-1px) scale(1.02); }
 
-/* ===== MOBILE RESPONSIVE - ADDED ===== */
+/* ===== MOBILE RESPONSIVE - ENHANCED ===== */
 
 /* Mobile Loading Screen */
 .mobile-loading {
@@ -741,6 +843,8 @@ body {
     align-items: center;
     z-index: 9999;
     transition: opacity 0.5s ease;
+    padding: 20px;
+    text-align: center;
 }
 
 .mobile-loading.hidden {
@@ -754,17 +858,18 @@ body {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     background: linear-gradient(135deg, #3498db, #2980b9);
     color: white;
     border-radius: 50%;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
     z-index: 1000;
     cursor: pointer;
     transition: all 0.3s ease;
+    min-height: 60px;
 }
 
 .mobile-help-btn:hover {
@@ -772,16 +877,23 @@ body {
     box-shadow: 0 6px 20px rgba(52, 152, 219, 0.6);
 }
 
+.mobile-help-btn:active {
+    transform: scale(0.95);
+}
+
 /* Tablet & Mobile */
 @media (max-width: 768px) {
     .mobile-help-btn {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     .header {
         flex-direction: column;
         padding: 10px;
         gap: 10px;
+        min-height: auto;
     }
     
     .header h1 {
@@ -789,6 +901,7 @@ body {
         text-align: center;
         width: 100%;
         justify-content: center;
+        margin-bottom: 5px;
     }
     
     .header-controls {
@@ -802,12 +915,33 @@ body {
         justify-content: center;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+        margin-bottom: 5px;
+    }
+    
+    .unit-controls::-webkit-scrollbar,
+    .game-controls::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .unit-controls::-webkit-scrollbar-track,
+    .game-controls::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+    }
+    
+    .unit-controls::-webkit-scrollbar-thumb,
+    .game-controls::-webkit-scrollbar-thumb {
+        background: #e74c3c;
+        border-radius: 3px;
     }
     
     .header button {
-        min-width: 60px;
-        padding: 10px 12px;
-        font-size: 0.8rem;
+        min-width: 65px;
+        min-height: 48px;
+        padding: 12px 10px;
+        font-size: 0.9rem;
+        margin: 3px;
         flex-shrink: 0;
     }
     
@@ -815,12 +949,13 @@ body {
         flex-direction: column;
         height: auto;
         min-height: calc(100vh - 140px);
+        touch-action: none;
     }
     
     .sidebar {
         width: 100%;
         height: auto;
-        max-height: 40vh;
+        max-height: 45vh;
         order: 2;
         border-right: none;
         border-top: 2px solid #2a2a3a;
@@ -837,21 +972,25 @@ body {
     
     .game-area {
         order: 1;
-        height: 60vh;
-        min-height: 400px;
+        height: 55vh;
+        min-height: 350px;
         padding: 10px;
+        touch-action: none;
     }
     
     #gameCanvas {
         border-radius: 10px;
+        touch-action: none;
     }
     
     .notification {
-        top: 10px;
-        right: 10px;
+        top: 70px;
         left: 10px;
+        right: 10px;
         max-width: none;
         text-align: center;
+        font-size: 0.9rem;
+        padding: 10px 14px;
     }
     
     .unit-tabs {
@@ -862,6 +1001,7 @@ body {
     .unit-tab {
         padding: 10px 4px;
         font-size: 0.7rem;
+        min-height: 55px;
     }
     
     .modal-content {
@@ -884,6 +1024,22 @@ body {
         padding: 15px 25px;
         font-size: 1.1rem;
         max-width: 100%;
+        min-height: 55px;
+    }
+    
+    /* Mobile specific button sizes */
+    .header button {
+        font-size: 0.8rem;
+        padding: 10px 8px;
+    }
+    
+    .header button::after {
+        font-size: 0.9rem;
+    }
+    
+    /* Prevent text zoom on iOS */
+    input, select, textarea, button {
+        font-size: 16px;
     }
 }
 
@@ -894,24 +1050,30 @@ body {
     }
     
     .header button {
-        min-width: 55px;
-        padding: 8px 10px;
+        min-width: 60px;
+        min-height: 45px;
+        padding: 10px 8px;
         font-size: 0.75rem;
     }
     
+    .header button::after {
+        font-size: 0.8rem;
+    }
+    
     .game-area {
-        height: 55vh;
-        min-height: 350px;
+        height: 50vh;
+        min-height: 300px;
     }
     
     .sidebar {
-        max-height: 35vh;
+        max-height: 40vh;
         padding: 12px;
     }
     
     .sidebar-tab {
         padding: 8px 4px;
         font-size: 0.75rem;
+        min-height: 40px;
     }
     
     .sidebar-section {
@@ -921,6 +1083,25 @@ body {
     .stat-row {
         padding: 10px 0;
         font-size: 0.85rem;
+    }
+    
+    .unit-tabs {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+    }
+    
+    .unit-tab {
+        min-height: 50px;
+        font-size: 0.65rem;
+        padding: 8px 2px;
+    }
+    
+    .mobile-help-btn {
+        width: 55px;
+        height: 55px;
+        font-size: 1.6rem;
+        bottom: 15px;
+        right: 15px;
     }
 }
 
@@ -935,12 +1116,19 @@ body {
     .header h1 {
         font-size: 1rem;
         width: auto;
+        margin-bottom: 0;
     }
     
     .header-controls {
         flex-direction: row;
         width: auto;
         justify-content: flex-end;
+        gap: 8px;
+    }
+    
+    .unit-controls, .game-controls {
+        width: auto;
+        max-width: 50vw;
     }
     
     .main-container {
@@ -976,13 +1164,23 @@ body {
     .unit-tabs {
         grid-template-columns: repeat(2, 1fr);
     }
+    
+    .mobile-help-btn {
+        bottom: 10px;
+        right: 10px;
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
 }
 
 /* Touch device optimizations */
 @media (hover: none) and (pointer: coarse) {
     .header button:hover,
     .sidebar-tab:hover,
-    .unit-tab:hover {
+    .unit-tab:hover,
+    .play-again-btn:hover,
+    .mobile-help-btn:hover {
         transform: none;
     }
     
@@ -996,36 +1194,52 @@ body {
         padding-right: 0;
         margin: 0;
     }
+    
+    .header button:active,
+    .sidebar-tab:active,
+    .unit-tab:active,
+    .play-again-btn:active,
+    .mobile-help-btn:active {
+        transform: scale(0.95);
+        transition: transform 0.1s ease;
+    }
 }
 
-/* Larger touch targets for mobile */
-.header button,
-.sidebar-tab,
-.unit-tab,
-.play-again-btn {
-    min-height: 44px;
-}
-
-/* Prevent text selection on buttons */
-.header button,
-.sidebar-tab,
-.unit-tab,
-.play-again-btn {
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* Better touch feedback */
+/* Better touch feedback for mobile */
 .header button:active,
 .sidebar-tab:active,
-.unit-tab:active {
+.unit-tab:active,
+.play-again-btn:active {
     transform: scale(0.95);
     transition: transform 0.1s ease;
 }
 
-/* Prevent pinch-zoom on game canvas */
-#gameCanvas {
-    touch-action: none;
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .header button.active-red {
+        outline: 3px solid white;
+    }
+    
+    #gameCanvas {
+        border: 2px solid white;
+    }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .winner-text {
+        animation: none;
+    }
+    
+    .header button.active-red::after {
+        animation: none;
+    }
 }
 
 /* Damage text animation */
@@ -1042,4 +1256,9 @@ body {
     0% { transform: translateY(0) scale(1); opacity: 1; }
     50% { transform: translateY(-15px) scale(1.1); opacity: 0.8; }
     100% { transform: translateY(-30px) scale(1.2); opacity: 0; }
+}
+
+/* Canvas interaction feedback */
+#gameCanvas:active {
+    opacity: 0.9;
 }
