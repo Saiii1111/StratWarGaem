@@ -382,6 +382,8 @@ function initGame() {
     const MOBILE_FPS_LIMIT = isMobile ? 30 : 60;
     const MAX_UNITS_MOBILE = isMobile ? 30 : 100;
     let currentDpr = 1;
+    let canvasWidth = 0;
+    let canvasHeight = 0;
 
     // Audio system
     const audio = new GameAudio();
@@ -392,26 +394,23 @@ function initGame() {
 
     const mapPadding = 20;
 
-    // Initialize canvas size - MOBILE FIXED VERSION
+    // Initialize canvas size - SIMPLIFIED VERSION (FIXED)
     function resizeCanvas() {
         const container = canvas.parentElement;
-        const dpr = window.devicePixelRatio || 1;
         const rect = container.getBoundingClientRect();
         
-        // Set display size (CSS pixels)
+        // Set CSS size
         canvas.style.width = rect.width + 'px';
         canvas.style.height = rect.height + 'px';
         
-        // Set actual size (device pixels)
-        canvas.width = Math.floor(rect.width * dpr);
-        canvas.height = Math.floor(rect.height * dpr);
+        // Set actual canvas size (1:1 with CSS pixels for simplicity)
+        canvas.width = rect.width;
+        canvas.height = rect.height;
         
-        currentDpr = dpr;
+        canvasWidth = rect.width;
+        canvasHeight = rect.height;
         
-        // Scale context for high DPI displays
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        
-        console.log(`Canvas resized: ${rect.width}x${rect.height} (dpr: ${dpr})`);
+        console.log(`Canvas resized: ${rect.width}x${rect.height}`);
     }
 
     // Initial resize and event listener
@@ -421,7 +420,7 @@ function initGame() {
         setTimeout(resizeCanvas, 100);
     });
 
-    // Update active button styling - ENHANCED VERSION
+    // Update active button styling
     function updateActiveButton() {
         document.querySelectorAll('.unit-controls button, .game-controls button').forEach(btn => {
             // Remove all active classes first
@@ -475,33 +474,33 @@ function initGame() {
 
     function drawMap() {
         // Clear with gradient background
-        const gradient = ctx.createLinearGradient(0, 0, canvas.width / currentDpr, canvas.height / currentDpr);
+        const gradient = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
         gradient.addColorStop(0, '#1a1a2e');
         gradient.addColorStop(1, '#16213e');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width / currentDpr, canvas.height / currentDpr);
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
         
         // Red team gradient
-        const redGradient = ctx.createLinearGradient(0, 0, canvas.width / (2 * currentDpr), 0);
+        const redGradient = ctx.createLinearGradient(0, 0, canvasWidth / 2, 0);
         redGradient.addColorStop(0, 'rgba(231, 76, 60, 0.1)');
         redGradient.addColorStop(1, 'rgba(231, 76, 60, 0.05)');
         ctx.fillStyle = redGradient;
-        ctx.fillRect(0, 0, canvas.width / (2 * currentDpr), canvas.height / currentDpr);
+        ctx.fillRect(0, 0, canvasWidth / 2, canvasHeight);
         
         // Blue team gradient
-        const blueGradient = ctx.createLinearGradient(canvas.width / currentDpr, 0, canvas.width / (2 * currentDpr), 0);
+        const blueGradient = ctx.createLinearGradient(canvasWidth, 0, canvasWidth / 2, 0);
         blueGradient.addColorStop(0, 'rgba(52, 152, 219, 0.1)');
         blueGradient.addColorStop(1, 'rgba(52, 152, 219, 0.05)');
         ctx.fillStyle = blueGradient;
-        ctx.fillRect(canvas.width / (2 * currentDpr), 0, canvas.width / (2 * currentDpr), canvas.height / currentDpr);
+        ctx.fillRect(canvasWidth / 2, 0, canvasWidth / 2, canvasHeight);
         
         // Center line
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.lineWidth = 2;
         ctx.setLineDash([10, 8]);
         ctx.beginPath();
-        ctx.moveTo(canvas.width / (2 * currentDpr), 0);
-        ctx.lineTo(canvas.width / (2 * currentDpr), canvas.height / currentDpr);
+        ctx.moveTo(canvasWidth / 2, 0);
+        ctx.lineTo(canvasWidth / 2, canvasHeight);
         ctx.stroke();
         ctx.setLineDash([]);
         
@@ -510,19 +509,17 @@ function initGame() {
         ctx.font = `bold ${isMobile ? '14px' : '18px'} "Segoe UI", system-ui`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🔴 RED', canvas.width / (4 * currentDpr), 25);
+        ctx.fillText('🔴 RED', canvasWidth / 4, 25);
         
         ctx.fillStyle = 'rgba(52, 152, 219, 0.8)';
-        ctx.fillText('🔵 BLUE', (canvas.width * 3) / (4 * currentDpr), 25);
+        ctx.fillText('🔵 BLUE', canvasWidth * 3 / 4, 25);
         
         // Battlefield border
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
-        ctx.rect(mapPadding, mapPadding, 
-                canvas.width / currentDpr - mapPadding * 2, 
-                canvas.height / currentDpr - mapPadding * 2);
+        ctx.rect(mapPadding, mapPadding, canvasWidth - mapPadding * 2, canvasHeight - mapPadding * 2);
         ctx.stroke();
         ctx.setLineDash([]);
     }
@@ -532,15 +529,15 @@ function initGame() {
         
         const settings = UNIT_SETTINGS[placingMode];
         let radius = baseUnitSize * settings.radiusMultiplier;
-        let team = mouseX < (canvas.width / currentDpr) / 2 ? "red" : "blue";
+        let team = mouseX < canvasWidth / 2 ? "red" : "blue";
         let type = placingMode;
         
         let color = team === "red" ? "rgba(231, 76, 60, 0.6)" : "rgba(52, 152, 219, 0.6)";
             
         const withinBounds = mouseX > mapPadding + radius && 
-                            mouseX < canvas.width / currentDpr - mapPadding - radius && 
+                            mouseX < canvasWidth - mapPadding - radius && 
                             mouseY > mapPadding + radius && 
-                            mouseY < canvas.height / currentDpr - mapPadding - radius;
+                            mouseY < canvasHeight - mapPadding - radius;
         let blocked = circles.some(c => Math.hypot(c.x - mouseX, c.y - mouseY) < (c.radius + radius) * 0.8);
         
         if (blocked || !withinBounds) color = "rgba(231, 76, 60, 0.8)";
@@ -733,7 +730,7 @@ function initGame() {
     class Circle {
         constructor(x, y, team, type = 'soldier') {
             this.x = x; this.y = y; this.team = team; this.type = type;
-            const sizeMultiplier = Math.min(canvas.width / currentDpr, canvas.height / currentDpr) / 800;
+            const sizeMultiplier = Math.min(canvasWidth, canvasHeight) / 800;
             const settings = UNIT_SETTINGS[type];
             
             this.radius = baseUnitSize * settings.radiusMultiplier * sizeMultiplier;
@@ -958,8 +955,8 @@ function initGame() {
                 }
             }
             this.x += pushX; this.y += pushY;
-            this.x = Math.max(mapPadding + this.radius, Math.min(canvas.width / currentDpr - mapPadding - this.radius, this.x));
-            this.y = Math.max(mapPadding + this.radius, Math.min(canvas.height / currentDpr - mapPadding - this.radius, this.y));
+            this.x = Math.max(mapPadding + this.radius, Math.min(canvasWidth - mapPadding - this.radius, this.x));
+            this.y = Math.max(mapPadding + this.radius, Math.min(canvasHeight - mapPadding - this.radius, this.y));
         }
 
         updateAI(enemies, allies) {
@@ -1302,7 +1299,6 @@ function initGame() {
 
     function getCanvasMousePos(event) {
         const rect = canvas.getBoundingClientRect();
-        const dpr = currentDpr;
         let clientX, clientY;
         
         if (event.type.includes('touch')) {
@@ -1310,7 +1306,6 @@ function initGame() {
                 clientX = event.touches[0].clientX;
                 clientY = event.touches[0].clientY;
             } else if (event.changedTouches && event.changedTouches.length > 0) {
-                // For touchend events
                 clientX = event.changedTouches[0].clientX;
                 clientY = event.changedTouches[0].clientY;
             } else {
@@ -1321,10 +1316,10 @@ function initGame() {
             clientY = event.clientY;
         }
         
-        // Convert to canvas coordinates (considering DPR)
+        // Convert to canvas coordinates
         return { 
-            x: (clientX - rect.left) * (canvas.width / rect.width) / dpr,
-            y: (clientY - rect.top) * (canvas.height / rect.height) / dpr
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
         };
     }
 
@@ -1351,13 +1346,6 @@ function initGame() {
     function handleCanvasClick(x, y) {
         if (gameRunning) return;
         
-        const settings = UNIT_SETTINGS[placingMode];
-        const radius = baseUnitSize * settings.radiusMultiplier;
-        const withinBounds = x > mapPadding + radius && 
-                           x < canvas.width / currentDpr - mapPadding - radius && 
-                           y > mapPadding + radius && 
-                           y < canvas.height / currentDpr - mapPadding - radius;
-        
         if (placingMode === "delete") {
             // DELETE MODE: Find and delete the closest unit
             let closestUnit = null;
@@ -1369,7 +1357,7 @@ function initGame() {
                 const dist = Math.hypot(c.x - x, c.y - y);
                 
                 // Check if click is within the unit's radius (with a little padding)
-                if (dist < c.radius + 5 && dist < closestDistance) {
+                if (dist < c.radius * 1.5 && dist < closestDistance) {
                     closestDistance = dist;
                     closestUnit = c;
                     deleteIndex = i;
@@ -1395,6 +1383,13 @@ function initGame() {
         }
         
         // PLACEMENT MODE
+        const settings = UNIT_SETTINGS[placingMode];
+        const radius = baseUnitSize * settings.radiusMultiplier;
+        const withinBounds = x > mapPadding + radius && 
+                           x < canvasWidth - mapPadding - radius && 
+                           y > mapPadding + radius && 
+                           y < canvasHeight - mapPadding - radius;
+        
         if (!withinBounds) { 
             showNotification('Cannot place outside battlefield', 'warning'); 
             return; 
@@ -1402,7 +1397,7 @@ function initGame() {
 
         if (placingMode === "soldier" || placingMode === "tank" || placingMode === "healer" || placingMode === "musketeer" || placingMode === "cavalry") {
             let type = placingMode; 
-            let team = x < (canvas.width / currentDpr) / 2 ? 'red' : 'blue';
+            let team = x < canvasWidth / 2 ? 'red' : 'blue';
             
             if (!canPlaceUnit(x, y, type)) return;
             
@@ -1415,7 +1410,7 @@ function initGame() {
         }
     }
 
-    // Event Listeners setup - MOBILE OPTIMIZED
+    // Event Listeners setup
     function setupEventListeners() {
         // Mouse events for desktop
         canvas.addEventListener("mousemove", e => { 
@@ -1429,16 +1424,12 @@ function initGame() {
             handleCanvasClick(pos.x, pos.y); 
         });
         
-        // Touch events for mobile - with better handling
+        // Touch events for mobile
         canvas.addEventListener("touchstart", function(e) {
             e.preventDefault();
             const pos = getCanvasMousePos(e);
             mouseX = pos.x;
             mouseY = pos.y;
-            
-            // Visual feedback for touch
-            this.style.opacity = '0.9';
-            setTimeout(() => this.style.opacity = '1', 100);
             
             // Handle the click/tap
             handleCanvasClick(pos.x, pos.y);
@@ -1458,7 +1449,7 @@ function initGame() {
         // Prevent context menu on canvas
         canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Unit buttons - with enhanced active state
+        // Unit buttons
         document.querySelectorAll('.unit-controls button').forEach(btn => {
             if (btn.dataset.type) {
                 btn.onclick = () => { 
@@ -1473,10 +1464,10 @@ function initGame() {
             }
         });
 
-        // Control buttons
+        // Control buttons - FIXED DELETE ALL (NO CONFIRMATION)
         document.getElementById("deleteTool").onclick = () => { 
             placingMode = "delete"; 
-            showNotification("Delete Tool - Tap units to remove", 'warning'); 
+            showNotification("Delete Tool - Click units to remove", 'warning'); 
             showGhost = false; 
             updateActiveButton();
             
@@ -1486,12 +1477,10 @@ function initGame() {
         
         document.getElementById("deleteAllBtn").onclick = () => {
             if (circles.length > 0) {
-                if (confirm(isMobile ? "Delete all units?" : "Are you sure you want to delete all units?")) {
-                    circles = [];
-                    // Play delete sound
-                    audio.playDelete();
-                    showNotification('All units deleted', 'warning');
-                }
+                circles = [];
+                // Play delete sound
+                audio.playDelete();
+                showNotification('All units deleted', 'warning');
             } else {
                 showNotification('No units to delete', 'info');
             }
@@ -1537,33 +1526,33 @@ function initGame() {
             // Red Team
             for (let i = 0; i < soldierCount; i++) {
                 circles.push(new Circle(
-                    padding + Math.random() * (canvas.width / (2 * currentDpr) - padding * 2), 
-                    padding + Math.random() * (canvas.height / currentDpr - padding * 2), 
+                    padding + Math.random() * (canvasWidth / 2 - padding * 2), 
+                    padding + Math.random() * (canvasHeight - padding * 2), 
                     'red', 'soldier'
                 ));
             }
             
             if (specialCount > 0) {
-                circles.push(new Circle(padding + 40, canvas.height / (2 * currentDpr) - 60, 'red', 'tank'));
-                circles.push(new Circle(padding + 60, canvas.height / (3 * currentDpr), 'red', 'healer'));
-                circles.push(new Circle(padding + 120, canvas.height / (4 * currentDpr), 'red', 'musketeer'));
-                circles.push(new Circle(padding + 160, canvas.height / (5 * currentDpr), 'red', 'cavalry'));
+                circles.push(new Circle(padding + 40, canvasHeight / 2 - 60, 'red', 'tank'));
+                circles.push(new Circle(padding + 60, canvasHeight / 3, 'red', 'healer'));
+                circles.push(new Circle(padding + 120, canvasHeight / 4, 'red', 'musketeer'));
+                circles.push(new Circle(padding + 160, canvasHeight / 5, 'red', 'cavalry'));
             }
             
             // Blue Team
             for (let i = 0; i < soldierCount; i++) {
                 circles.push(new Circle(
-                    canvas.width / (2 * currentDpr) + padding + Math.random() * (canvas.width / (2 * currentDpr) - padding * 2), 
-                    padding + Math.random() * (canvas.height / currentDpr - padding * 2), 
+                    canvasWidth / 2 + padding + Math.random() * (canvasWidth / 2 - padding * 2), 
+                    padding + Math.random() * (canvasHeight - padding * 2), 
                     'blue', 'soldier'
                 ));
             }
             
             if (specialCount > 0) {
-                circles.push(new Circle(canvas.width / currentDpr - padding - 40, canvas.height / (2 * currentDpr) - 60, 'blue', 'tank'));
-                circles.push(new Circle(canvas.width / currentDpr - padding - 60, canvas.height / (3 * currentDpr), 'blue', 'healer'));
-                circles.push(new Circle(canvas.width / currentDpr - padding - 120, canvas.height / (4 * currentDpr), 'blue', 'musketeer'));
-                circles.push(new Circle(canvas.width / currentDpr - padding - 160, canvas.height / (5 * currentDpr), 'blue', 'cavalry'));
+                circles.push(new Circle(canvasWidth - padding - 40, canvasHeight / 2 - 60, 'blue', 'tank'));
+                circles.push(new Circle(canvasWidth - padding - 60, canvasHeight / 3, 'blue', 'healer'));
+                circles.push(new Circle(canvasWidth - padding - 120, canvasHeight / 4, 'blue', 'musketeer'));
+                circles.push(new Circle(canvasWidth - padding - 160, canvasHeight / 5, 'blue', 'cavalry'));
             }
             
             // Play placement sounds for auto-placed units
@@ -1586,7 +1575,7 @@ function initGame() {
             audio.playButton();
         };
         
-        // Add button sounds to all other buttons
+        // Add button sounds to other buttons
         document.querySelectorAll('.sidebar-tab, .unit-tab').forEach(btn => {
             btn.addEventListener('click', () => {
                 audio.playButton();
